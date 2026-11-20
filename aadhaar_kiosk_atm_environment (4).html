@@ -1352,30 +1352,38 @@
       }
     }
 
-    // Kiosk Body Material: #ffe0d1 (Warm peach cream)
+    // UIDAI Official Brand Theme Materials
+    // Body: Clean High-Tech UIDAI Off-White with subtle warm metallic reflection
     const absWhiteMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0xffe0d1),
-      roughness: 0.28,
-      metalness: 0.08,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.2
+      color: new THREE.Color(0xf8fafc),
+      roughness: 0.22,
+      metalness: 0.12,
+      clearcoat: 0.45,
+      clearcoatRoughness: 0.15
     });
 
+    // Glass Trim: High-Clarity Toughened Security Glass
     const glassBlueMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0.423529, 0.768627, 0.854902),
-      roughness: 0.1,
-      metalness: 0.15,
-      transmission: 0.65,
+      color: new THREE.Color(0x38bdf8),
+      roughness: 0.08,
+      metalness: 0.1,
+      transmission: 0.72,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.9,
       ior: 1.52,
-      reflectivity: 0.9
+      reflectivity: 0.95
     });
 
+    // Accent Plinth & Bezel: UIDAI Emblem Navy Blue
     const kioskDarkAccentMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      metalness: 0.45,
-      roughness: 0.3
+      color: 0x1e3a8a,
+      metalness: 0.5,
+      roughness: 0.25
+    });
+
+    // Saffron Ambient Indicator Material
+    const uidaiSaffronMat = new THREE.MeshBasicMaterial({
+      color: 0xea580c
     });
 
     // Parse Kiosk.obj with MTLLoader materials bound
@@ -1492,12 +1500,21 @@
       podGroup.add(screenMesh);
       interactiveScreens.push(screenMesh);
 
-      // Glass Edge Protective Bezel Frame flush with glass boundary
+      // Glass Edge Protective Bezel Frame flush with glass boundary (UIDAI Navy Blue)
       const bezelGeo = new THREE.BoxGeometry(0.53, 0.46, 0.008);
       const bezelMesh = new THREE.Mesh(bezelGeo, kioskDarkAccentMaterial);
       bezelMesh.position.set(0.005, 1.385, 0.034);
       bezelMesh.rotation.x = -0.100;
       podGroup.add(bezelMesh);
+
+      // Signature UIDAI Saffron Top Accent Fin
+      const saffronAccent = new THREE.Mesh(
+        new THREE.BoxGeometry(0.48, 0.018, 0.01),
+        uidaiSaffronMat
+      );
+      saffronAccent.position.set(0.005, 1.622, 0.015);
+      saffronAccent.rotation.x = -0.100;
+      podGroup.add(saffronAccent);
 
       // Ambient Biometric Scanner Glow LED strip underneath screen
       const scannerGlow = new THREE.Mesh(
