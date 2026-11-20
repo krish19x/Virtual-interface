@@ -1352,11 +1352,9 @@
       }
     }
 
-    // Kiosk.mtl exact colors:
-    // ABS_(White): Kd 1.0 0.878431 0.819608 (warm off-white / peach-cream chassis)
-    // Glass_-_Light_Color_(Blue): Kd 0.423529 0.768627 0.854902 (vibrant cyan-blue tint)
+    // Kiosk Body Material: #ffe0d1 (Warm peach cream)
     const absWhiteMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(1.0, 0.878431, 0.819608),
+      color: new THREE.Color(0xffe0d1),
       roughness: 0.28,
       metalness: 0.08,
       clearcoat: 0.35,
