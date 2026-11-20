@@ -1744,38 +1744,20 @@
     currentTokenNumber++;
     updateQueueBoardCanvas();
 
-    mesh.userData.activeStep = (mesh.userData.activeStep + 1) % 3;
-    const newScreenObj = createKioskScreenTexture(mesh.userData.podIndex, mesh.userData.activeStep);
-    mesh.material.map = newScreenObj.texture;
-    mesh.material.needsUpdate = true;
-    mesh.userData.screenObj = newScreenObj;
-
-    openKioskModal(mesh.userData.podIndex, newScreenObj.currentStep);
+    const podIndex = (mesh.userData && mesh.userData.podIndex) ? mesh.userData.podIndex : 1;
+    openKioskModal(podIndex);
   }
 
-  function openKioskModal(podId, stepData) {
+  function openKioskModal(podId) {
     const modal = document.getElementById('kiosk-modal');
-    document.getElementById('modal-pod-id').textContent = `TERMINAL POD 0${podId} • ONLINE`;
-    document.getElementById('modal-title').textContent = stepData.title;
+    document.getElementById('modal-pod-id').textContent = `TERMINAL POD 0${podId} • LIVE ACTIVE`;
+    document.getElementById('modal-title').textContent = 'UIDAI Interactive Kiosk Terminal';
 
-    const contentDiv = document.getElementById('modal-screen-content');
-    contentDiv.innerHTML = `
-      <div>
-        <p class="text-xs text-slate-400 mb-3">${stepData.sub}</p>
-        <div class="space-y-2">
-          ${stepData.cards.map((c, i) => `
-            <div class="p-3 rounded-xl ${i === 0 ? 'bg-amber-500/20 border border-amber-500/40 text-amber-200' : 'bg-slate-900 border border-white/10 text-slate-300'} flex items-center justify-between text-xs font-semibold">
-              <span>${c}</span>
-              <i class="fa-solid fa-chevron-right text-[10px]"></i>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
-        <span><i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i>256-Bit Encrypted Session</span>
-        <span>Time remaining: 01:58</span>
-      </div>
-    `;
+    // Ensure the iframe loads the current live prototype index
+    const iframe = document.getElementById('kiosk-iframe');
+    if (iframe && (!iframe.src || !iframe.src.includes('kiosk-interface.html'))) {
+      iframe.src = 'kiosk-interface.html';
+    }
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
