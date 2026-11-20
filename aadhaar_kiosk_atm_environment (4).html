@@ -1470,18 +1470,22 @@
       plinth.receiveShadow = true;
       podGroup.add(plinth);
 
-      // 3. Interactive Touchscreen & Display Surface
+      // 3. Interactive Touchscreen directly on the Glass face of Kiosk.obj
+      // In Kiosk.obj, the forward glass face spans:
+      // Width: 0.52m (X: -0.255 to 0.265, center = 0.005)
+      // Height: 0.46m (Y: 1.15 to 1.61, center = 1.385)
+      // Depth Z: 0.038 (slight tilt of -5.74 deg around X)
       const screenObj = createKioskScreenTexture(idx + 1, 0);
-      const screenGeo = new THREE.PlaneGeometry(0.53, 0.41);
+      const screenGeo = new THREE.PlaneGeometry(0.51, 0.44);
       const screenMat = new THREE.MeshBasicMaterial({ 
         map: screenObj.texture,
         transparent: false,
         side: THREE.DoubleSide
       });
       const screenMesh = new THREE.Mesh(screenGeo, screenMat);
-      // Screen face in +Z orientation: positioned cleanly forward so it never clips with chassis
-      screenMesh.position.set(0.005, 1.28, 0.215);
-      screenMesh.rotation.x = -0.296;
+      // Mapped directly onto the glass panel face:
+      screenMesh.position.set(0.005, 1.385, 0.040);
+      screenMesh.rotation.x = -0.100; // -5.74 degrees tilt matching glass normal
       screenMesh.userData = {
         podIndex: idx + 1,
         activeStep: 0,
@@ -1490,11 +1494,11 @@
       podGroup.add(screenMesh);
       interactiveScreens.push(screenMesh);
 
-      // Screen Bezel border
-      const bezelGeo = new THREE.BoxGeometry(0.55, 0.43, 0.015);
+      // Glass Edge Protective Bezel Frame flush with glass boundary
+      const bezelGeo = new THREE.BoxGeometry(0.53, 0.46, 0.008);
       const bezelMesh = new THREE.Mesh(bezelGeo, kioskDarkAccentMaterial);
-      bezelMesh.position.set(0.005, 1.28, 0.208);
-      bezelMesh.rotation.x = -0.296;
+      bezelMesh.position.set(0.005, 1.385, 0.034);
+      bezelMesh.rotation.x = -0.100;
       podGroup.add(bezelMesh);
 
       // Ambient Biometric Scanner Glow LED strip underneath screen
