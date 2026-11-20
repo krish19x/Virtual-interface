@@ -1448,8 +1448,9 @@
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+            child.userData = { isKioskPart: true, podIndex: idx + 1 };
 
-            // Handle both single material and MultiMaterial array created by OBJLoader
+            // Handle materials defined in Kiosk.mtl
             if (Array.isArray(child.material)) {
               child.material = child.material.map(m => {
                 const name = (m && m.name) ? m.name : '';
@@ -1461,6 +1462,8 @@
             } else {
               child.material = absWhiteMaterial;
             }
+
+            interactiveScreens.push(child);
           }
         });
 
@@ -1475,55 +1478,6 @@
       plinth.position.set(0, 0.02, 0);
       plinth.receiveShadow = true;
       podGroup.add(plinth);
-
-      // 3. Interactive Touchscreen directly on the Glass face of Kiosk.obj
-      // In Kiosk.obj, the forward glass face spans:
-      // Width: 0.52m (X: -0.255 to 0.265, center = 0.005)
-      // Height: 0.46m (Y: 1.15 to 1.61, center = 1.385)
-      // Depth Z: 0.038 (slight tilt of -5.74 deg around X)
-      const screenObj = createKioskScreenTexture(idx + 1, 0);
-      const screenGeo = new THREE.PlaneGeometry(0.51, 0.44);
-      const screenMat = new THREE.MeshBasicMaterial({ 
-        map: screenObj.texture,
-        transparent: false,
-        side: THREE.DoubleSide
-      });
-      const screenMesh = new THREE.Mesh(screenGeo, screenMat);
-      // Mapped directly onto the glass panel face:
-      screenMesh.position.set(0.005, 1.385, 0.040);
-      screenMesh.rotation.x = -0.100; // -5.74 degrees tilt matching glass normal
-      screenMesh.userData = {
-        podIndex: idx + 1,
-        activeStep: 0,
-        screenObj: screenObj
-      };
-      podGroup.add(screenMesh);
-      interactiveScreens.push(screenMesh);
-
-      // Glass Edge Protective Bezel Frame flush with glass boundary (UIDAI Navy Blue)
-      const bezelGeo = new THREE.BoxGeometry(0.53, 0.46, 0.008);
-      const bezelMesh = new THREE.Mesh(bezelGeo, kioskDarkAccentMaterial);
-      bezelMesh.position.set(0.005, 1.385, 0.034);
-      bezelMesh.rotation.x = -0.100;
-      podGroup.add(bezelMesh);
-
-      // Signature UIDAI Saffron Top Accent Fin
-      const saffronAccent = new THREE.Mesh(
-        new THREE.BoxGeometry(0.48, 0.018, 0.01),
-        uidaiSaffronMat
-      );
-      saffronAccent.position.set(0.005, 1.622, 0.015);
-      saffronAccent.rotation.x = -0.100;
-      podGroup.add(saffronAccent);
-
-      // Ambient Biometric Scanner Glow LED strip underneath screen
-      const scannerGlow = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.38, 0.018),
-        new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide })
-      );
-      scannerGlow.position.set(0.005, 0.94, 0.145);
-      scannerGlow.rotation.x = -0.55;
-      podGroup.add(scannerGlow);
 
       scene.add(podGroup);
       kioskGroupList.push(podGroup);
