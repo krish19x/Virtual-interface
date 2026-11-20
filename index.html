@@ -1444,21 +1444,49 @@
         kioskClone.scale.set(0.01, 0.01, 0.01);
         kioskClone.position.set(0, 0, 0);
 
+        const screenObj = createKioskScreenTexture(idx + 1, 0);
+
+        // Dedicated Glass Screen Material displaying the Aadhaar Kiosk Interface texture
+        const kioskScreenMaterial = new THREE.MeshBasicMaterial({
+          map: screenObj.texture,
+          transparent: false,
+          side: THREE.DoubleSide
+        });
+
         kioskClone.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
             child.userData = { isKioskPart: true, podIndex: idx + 1 };
 
-            // Handle materials defined in Kiosk.mtl
-            if (Array.isArray(child.material)) {
-              child.material = child.material.map(m => {
-                const name = (m && m.name) ? m.name : '';
-                return (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
-              });
-            } else if (child.material) {
-              const name = child.material.name || '';
-              child.material = (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
+            const isGlass = () => {
+              if (Array.isArray(child.material)) {
+                return child.material.some(m => (m && m.name && (m.name.includes('Glass') || m.name.includes('Blue'))));
+              }
+              const name = (child.material && child.material.name) ? child.material.name : '';
+              return name.includes('Glass') || name.includes('Blue');
+            };
+
+            if (isGlass()) {
+              // Remap UV coordinates of the original Glass sub-mesh directly so the interface texture displays properly
+              const geo = child.geometry;
+              if (geo && geo.attributes && geo.attributes.position) {
+                const pos = geo.attributes.position;
+                const uvs = new Float32Array(pos.count * 2);
+                for (let i = 0; i < pos.count; i++) {
+                  const x = pos.getX(i);
+                  const z = pos.getZ(i);
+                  // OBJ Local coords: X spans -26.5 to 27.5, Z spans 89.5 to 163.4
+                  const u = THREE.MathUtils.clamp((x - (-26.5)) / 54.0, 0, 1);
+                  const v = THREE.MathUtils.clamp((z - 92.0) / 70.0, 0, 1);
+                  uvs[i * 2] = u;
+                  uvs[i * 2 + 1] = v;
+                }
+                geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+                geo.attributes.uv.needsUpdate = true;
+              }
+              child.material = kioskScreenMaterial;
+              child.userData.isScreen = true;
             } else {
               child.material = absWhiteMaterial;
             }
