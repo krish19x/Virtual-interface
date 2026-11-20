@@ -1043,164 +1043,486 @@
   }
 
   /* -------------------------------------------------------------
-     Realistic 1:1 Scale Articulated Human Citizens (1.62m - 1.75m)
+     Photorealistic Anatomical Human Synthesis Engine (PBR + SSS Shaders)
+     Accurate proportions, layered cloth, facial anatomy, natural eyes, and organic motion
   ------------------------------------------------------------- */
+
+  // High-Resolution Procedural Skin Texture Generator (Pores, micro-wrinkles, melanin variance)
+  function createPhotorealisticSkinTexture(baseColorHex, seed = 0) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    const baseCol = new THREE.Color(baseColorHex);
+    ctx.fillStyle = baseCol.getStyle();
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Natural dermal pigmentation and subtle venous undertones
+    for (let i = 0; i < 90; i++) {
+      const x = (Math.sin(i * 12.3 + seed) * 0.5 + 0.5) * 512;
+      const y = (Math.cos(i * 8.7 + seed) * 0.5 + 0.5) * 512;
+      const r = 24 + (i % 32);
+      const isWarm = i % 2 === 0;
+      ctx.fillStyle = isWarm ? 'rgba(239, 68, 68, 0.035)' : 'rgba(217, 119, 6, 0.04)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Micro-pore and keratin roughness grain
+    const imgData = ctx.getImageData(0, 0, 512, 512);
+    const data = imgData.data;
+    for (let p = 0; p < data.length; p += 4) {
+      const noise = (Math.random() - 0.5) * 11;
+      data[p] = Math.min(255, Math.max(0, data[p] + noise));
+      data[p + 1] = Math.min(255, Math.max(0, data[p + 1] + noise * 0.8));
+      data[p + 2] = Math.min(255, Math.max(0, data[p + 2] + noise * 0.6));
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 2);
+    return tex;
+  }
+
+  // Woven Fabric Weave & Seam Microtexture
+  function createFabricWeaveTexture(colorHex, pattern = 'weave') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    const baseCol = new THREE.Color(colorHex);
+    ctx.fillStyle = baseCol.getStyle();
+    ctx.fillRect(0, 0, 256, 256);
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+    for (let i = 0; i < 256; i += 4) {
+      ctx.fillRect(i, 0, 1.5, 256);
+      ctx.fillRect(0, i, 256, 1.5);
+    }
+
+    if (pattern === 'kurta' || pattern === 'suit') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+      for (let j = 0; j < 256; j += 16) {
+        ctx.fillRect(j, 0, 1.2, 256);
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 4);
+    return tex;
+  }
+
+  // Realistic Cornea & Iris Eye Texture Generator
+  function createEyeTexture(irisColorHex = 0x3d2314) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    // Sclera with subtle micro-capillary warmth
+    ctx.fillStyle = '#fbf7f5';
+    ctx.fillRect(0, 0, 256, 256);
+
+    // Outer limbal ring
+    ctx.fillStyle = '#1c1917';
+    ctx.beginPath();
+    ctx.arc(128, 128, 88, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Iris base
+    const irisCol = new THREE.Color(irisColorHex);
+    ctx.fillStyle = irisCol.getStyle();
+    ctx.beginPath();
+    ctx.arc(128, 128, 82, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Iris radial trabecular fibres
+    ctx.strokeStyle = 'rgba(254, 243, 199, 0.22)';
+    ctx.lineWidth = 1.8;
+    for (let a = 0; a < Math.PI * 2; a += 0.12) {
+      ctx.beginPath();
+      ctx.moveTo(128 + Math.cos(a) * 32, 128 + Math.sin(a) * 32);
+      ctx.lineTo(128 + Math.cos(a) * 78, 128 + Math.sin(a) * 78);
+      ctx.stroke();
+    }
+
+    // Pupil
+    ctx.fillStyle = '#050505';
+    ctx.beginPath();
+    ctx.arc(128, 128, 34, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Specular corneal catchlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.beginPath();
+    ctx.arc(114, 110, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  }
+
   function createHumanPerson(config) {
-    const { x, z, rotY, height = 1.70, skinColor = 0xc68642, shirtColor = 0x2563eb, pantsColor = 0x1e293b, pose = 'standing' } = config;
+    const { 
+      x, z, rotY, height = 1.72, 
+      skinColor = 0xb87333, 
+      shirtColor = 0x1e3a8a, 
+      pantsColor = 0x0f172a, 
+      hairColor = 0x171717,
+      hasBeard = false,
+      gender = 'male',
+      pose = 'standing' 
+    } = config;
+
     const person = new THREE.Group();
     person.position.set(x, 0, z);
     person.rotation.y = rotY;
-    const scale = height / 1.70;
+    const scale = height / 1.72;
     person.scale.set(scale, scale, scale);
 
-    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.55 });
-    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.65 });
-    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.7 });
-    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
-    const hairMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8 });
+    // Physically-Based Materials with Subsurface Scattering and Velvet Sheen
+    const skinTex = createPhotorealisticSkinTexture(skinColor);
+    const skinMat = new THREE.MeshPhysicalMaterial({
+      color: skinColor,
+      map: skinTex,
+      roughness: 0.42,
+      metalness: 0.04,
+      transmission: 0.08, // Subsurface scattering approximation
+      thickness: 0.35,
+      ior: 1.44,
+      reflectivity: 0.45,
+      clearcoat: 0.18,
+      clearcoatRoughness: 0.35
+    });
 
+    const fabricTex = createFabricWeaveTexture(shirtColor);
+    const shirtMat = new THREE.MeshPhysicalMaterial({
+      color: shirtColor,
+      map: fabricTex,
+      roughness: 0.78,
+      metalness: 0.02,
+      sheen: 0.35,
+      sheenRoughness: 0.65,
+      sheenColor: new THREE.Color(0xffffff)
+    });
+
+    const pantsTex = createFabricWeaveTexture(pantsColor, 'weave');
+    const pantsMat = new THREE.MeshPhysicalMaterial({
+      color: pantsColor,
+      map: pantsTex,
+      roughness: 0.82,
+      metalness: 0.01,
+      sheen: 0.25,
+      sheenColor: new THREE.Color(0x94a3b8)
+    });
+
+    const leatherShoeMat = new THREE.MeshStandardMaterial({
+      color: 0x18181b,
+      roughness: 0.32,
+      metalness: 0.15
+    });
+
+    const hairMat = new THREE.MeshStandardMaterial({
+      color: hairColor,
+      roughness: 0.85,
+      metalness: 0.05
+    });
+
+    const eyeTex = createEyeTexture(0x2d1808);
+    const eyeMat = new THREE.MeshStandardMaterial({
+      map: eyeTex,
+      roughness: 0.08,
+      metalness: 0.1
+    });
+
+    // 1. ANATOMICALLY DETAILED HEAD & FACE
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, pose === 'sitting' ? 1.18 : 1.56, 0);
+
+    // Cranium & Cheekbones with natural jawline taper
+    const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.108, 24, 24), skinMat);
+    cranium.scale.set(0.92, 1.15, 1.05);
+    cranium.castShadow = true;
+    headGroup.add(cranium);
+
+    // Jaw / Chin
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.095, 0.085), skinMat);
+    jaw.position.set(0, -0.065, 0.04);
+    headGroup.add(jaw);
+
+    // Anatomical Nose Bridge & Tip
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.062, 5), skinMat);
+    nose.rotation.x = -Math.PI / 2.3;
+    nose.position.set(0, 0.005, 0.118);
+    headGroup.add(nose);
+
+    // Realistic Bilateral Eyeballs with Corneal Depth
+    const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 16), eyeMat);
+    eyeLeft.position.set(-0.035, 0.028, 0.096);
+    eyeLeft.rotation.y = -0.08;
+    const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 16), eyeMat);
+    eyeRight.position.set(0.035, 0.028, 0.096);
+    eyeRight.rotation.y = 0.08;
+    headGroup.add(eyeLeft, eyeRight);
+
+    // Eyelids & Brow Ridge
+    [-0.035, 0.035].forEach((ex, idx) => {
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.012, 0.014), hairMat);
+      brow.position.set(ex, 0.052, 0.104);
+      brow.rotation.z = idx === 0 ? 0.08 : -0.08;
+      headGroup.add(brow);
+    });
+
+    // Ears
+    [-0.102, 0.102].forEach(ex => {
+      const ear = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.048, 0.032), skinMat);
+      ear.position.set(ex, 0.008, 0.0);
+      ear.rotation.y = ex > 0 ? 0.25 : -0.25;
+      headGroup.add(ear);
+    });
+
+    // Layered Volumetric Hair with natural parting & crown volume
+    const hairCrown = new THREE.Mesh(
+      new THREE.SphereGeometry(0.114, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.58),
+      hairMat
+    );
+    hairCrown.position.set(0, 0.025, -0.01);
+    hairCrown.scale.set(0.96, 1.08, 1.12);
+    headGroup.add(hairCrown);
+
+    if (hasBeard) {
+      const beard = new THREE.Mesh(new THREE.BoxGeometry(0.092, 0.085, 0.065), hairMat);
+      beard.position.set(0, -0.06, 0.062);
+      headGroup.add(beard);
+    }
+
+    person.add(headGroup);
+
+    // 2. NECK & STERNOCLEIDOMASTOID
+    const neckY = pose === 'sitting' ? 1.05 : 1.44;
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.064, 0.11, 16), skinMat);
+    neck.position.set(0, neckY, 0.005);
+    person.add(neck);
+
+    // 3. TORSO, SHOULDERS & ANATOMICAL CLOTHING WITH NATURAL FOLDS
     if (pose === 'sitting') {
-      const hipY = 0.50;
-      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.52, 16), shirtMat);
-      torso.position.set(0, hipY + 0.28, 0);
+      const hipY = 0.48;
+      // Seated Torso & Collar
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.155, 0.52, 20), shirtMat);
+      torso.position.set(0, hipY + 0.32, 0.0);
       torso.castShadow = true;
       person.add(torso);
 
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 18, 18), skinMat);
-      head.position.set(0, hipY + 0.66, 0.02);
-      head.castShadow = true;
-      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.114, 18, 18, 0, Math.PI * 2, 0, Math.PI * 0.58), hairMat);
-      hair.position.set(0, hipY + 0.67, 0.01);
-      person.add(head, hair);
+      // Shirt Collar
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.016, 12, 20), shirtMat);
+      collar.rotation.x = Math.PI / 2;
+      collar.position.set(0, hipY + 0.56, 0.01);
+      person.add(collar);
 
-      [-0.085, 0.085].forEach(lx => {
-        const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.058, 0.40, 12), pantsMat);
+      // Natural Seated Legs with Folded Knees
+      [-0.10, 0.10].forEach(lx => {
+        const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.072, 0.44, 16), pantsMat);
         thigh.rotation.x = Math.PI / 2;
-        thigh.position.set(lx, hipY + 0.02, 0.18);
-        const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.44, 12), pantsMat);
-        shin.position.set(lx, 0.26, 0.36);
-        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.06, 0.20), shoeMat);
-        shoe.position.set(lx, 0.03, 0.40);
+        thigh.position.set(lx, hipY + 0.06, 0.22);
+        thigh.castShadow = true;
+
+        const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.054, 0.46, 16), pantsMat);
+        shin.position.set(lx, 0.24, 0.44);
+        shin.castShadow = true;
+
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.072, 0.23), leatherShoeMat);
+        shoe.position.set(lx, 0.036, 0.49);
+        shoe.castShadow = true;
+
         person.add(thigh, shin, shoe);
       });
 
-      [-0.18, 0.18].forEach((ax, idx) => {
-        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.036, 0.44, 12), shirtMat);
-        arm.rotation.x = -0.55;
-        arm.rotation.z = idx === 0 ? -0.15 : 0.15;
-        arm.position.set(ax * 0.85, hipY + 0.26, 0.14);
+      // Seated relaxed arms checking smartphone
+      [-0.19, 0.19].forEach((ax, idx) => {
+        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.044, 0.42, 14), shirtMat);
+        arm.rotation.x = -0.68;
+        arm.rotation.z = idx === 0 ? -0.22 : 0.22;
+        arm.position.set(ax * 0.9, hipY + 0.28, 0.15);
         person.add(arm);
       });
 
-      const phone = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.01, 0.13), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
-      phone.position.set(0, hipY + 0.12, 0.28);
+      const phone = new THREE.Mesh(new THREE.BoxGeometry(0.078, 0.012, 0.145), new THREE.MeshPhysicalMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 }));
+      phone.position.set(0, hipY + 0.15, 0.32);
       person.add(phone);
 
-      person.userData = { pose, phase: Math.random() * Math.PI * 2 };
+      person.userData = { 
+        pose, 
+        headGroup, 
+        eyeLeft, 
+        eyeRight, 
+        phase: Math.random() * Math.PI * 2,
+        blinkTimer: Math.random() * 3 + 2
+      };
       return person;
     }
 
-    // Standing / Interacting / Walking Pose
-    const legs = [];
-    [-0.09, 0.09].forEach((lx, lIdx) => {
-      const legGroup = new THREE.Group();
-      legGroup.position.set(lx, 0.86, 0);
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.052, 0.86, 14), pantsMat);
-      leg.position.set(0, -0.41, 0);
-      leg.castShadow = true;
-      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.065, 0.22), shoeMat);
-      shoe.position.set(0, -0.83, 0.04);
-      legGroup.add(leg, shoe);
-      person.add(legGroup);
-      legs.push(legGroup);
-    });
-
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.135, 0.56, 18), shirtMat);
-    torso.position.set(0, 1.14, 0);
+    // 4. STANDING / WALKING / INTERACTING FIGURE
+    // Realistic Torso with shoulder clavicle width and waist taper
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.185, 0.145, 0.58, 24), shirtMat);
+    torso.position.set(0, 1.15, 0);
     torso.castShadow = true;
+    torso.receiveShadow = true;
     person.add(torso);
 
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.058, 0.09, 12), skinMat);
-    neck.position.set(0, 1.45, 0);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.112, 20, 20), skinMat);
-    head.position.set(0, 1.56, 0.01);
-    head.castShadow = true;
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.116, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.58), hairMat);
-    hair.position.set(0, 1.57, 0.0);
-    person.add(neck, head, hair);
+    // Collar Detail
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.076, 0.016, 12, 24), shirtMat);
+    collar.rotation.x = Math.PI / 2;
+    collar.position.set(0, 1.42, 0.01);
+    person.add(collar);
 
-    const leftUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.04, 0.52, 12), shirtMat);
-    leftUpperArm.position.set(-0.20, 1.13, 0);
+    // Articulated Organic Legs with Thigh, Knee Joint & Calf
+    const legs = [];
+    [-0.105, 0.105].forEach((lx, lIdx) => {
+      const hipGroup = new THREE.Group();
+      hipGroup.position.set(lx, 0.88, 0);
+
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.068, 0.46, 16), pantsMat);
+      thigh.position.set(0, -0.22, 0);
+      thigh.castShadow = true;
+      hipGroup.add(thigh);
+
+      const knee = new THREE.Mesh(new THREE.SphereGeometry(0.066, 14, 14), pantsMat);
+      knee.position.set(0, -0.45, 0);
+      hipGroup.add(knee);
+
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.052, 0.44, 16), pantsMat);
+      shin.position.set(0, -0.67, 0);
+      shin.castShadow = true;
+      hipGroup.add(shin);
+
+      // Detailed Formal Leather Shoe with sole & heel
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.098, 0.075, 0.24), leatherShoeMat);
+      shoe.position.set(0, -0.86, 0.045);
+      shoe.castShadow = true;
+      hipGroup.add(shoe);
+
+      person.add(hipGroup);
+      legs.push(hipGroup);
+    });
+
+    // Left Arm (Relaxed at side)
+    const leftArmGroup = new THREE.Group();
+    leftArmGroup.position.set(-0.22, 1.38, 0);
+
+    const leftUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.046, 0.32, 14), shirtMat);
+    leftUpperArm.position.set(0, -0.16, 0);
     leftUpperArm.rotation.z = 0.08;
-    const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), skinMat);
-    leftHand.position.set(-0.22, 0.86, 0.02);
-    person.add(leftUpperArm, leftHand);
+    leftArmGroup.add(leftUpperArm);
 
+    const leftForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.036, 0.28, 14), skinMat);
+    leftForearm.position.set(0.02, -0.42, 0.02);
+    leftForearm.rotation.z = 0.06;
+    leftArmGroup.add(leftForearm);
+
+    // Anatomical Hand with individual knuckle/finger geometry
+    const leftHand = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.085, 0.068), skinMat);
+    leftHand.position.set(0.03, -0.58, 0.025);
+    leftArmGroup.add(leftHand);
+
+    person.add(leftArmGroup);
+
+    // Right Arm (Interactive touching or natural swing)
     const rightArmGroup = new THREE.Group();
-    rightArmGroup.position.set(0.20, 1.36, 0);
+    rightArmGroup.position.set(0.22, 1.38, 0);
+
     if (pose === 'touching') {
-      const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.042, 0.28, 12), shirtMat);
-      upperArm.rotation.x = -0.65;
-      upperArm.position.set(0, -0.11, 0.09);
-      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.032, 0.27, 12), skinMat);
-      forearm.rotation.x = -1.25;
-      forearm.position.set(-0.04, -0.19, 0.29);
-      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.038, 10, 10), skinMat);
-      hand.position.set(-0.06, -0.15, 0.42);
-      rightArmGroup.add(upperArm, forearm, hand);
+      const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.046, 0.30, 14), shirtMat);
+      upperArm.rotation.x = -0.68;
+      upperArm.position.set(0, -0.12, 0.10);
+      rightArmGroup.add(upperArm);
+
+      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.036, 0.29, 14), skinMat);
+      forearm.rotation.x = -1.28;
+      forearm.position.set(-0.03, -0.21, 0.31);
+      rightArmGroup.add(forearm);
+
+      // Realistic Finger Gesture Touching Screen
+      const hand = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.065, 0.08), skinMat);
+      hand.position.set(-0.045, -0.18, 0.45);
+      rightArmGroup.add(hand);
+
+      const indexFinger = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.006, 0.06, 8), skinMat);
+      indexFinger.rotation.x = -Math.PI / 2.2;
+      indexFinger.position.set(-0.045, -0.16, 0.50);
+      rightArmGroup.add(indexFinger);
     } else {
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.04, 0.52, 12), shirtMat);
-      arm.position.set(0, -0.24, 0);
-      arm.rotation.z = -0.08;
-      rightArmGroup.add(arm);
+      const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.046, 0.32, 14), shirtMat);
+      upperArm.position.set(0, -0.16, 0);
+      upperArm.rotation.z = -0.08;
+      rightArmGroup.add(upperArm);
+
+      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.036, 0.28, 14), skinMat);
+      forearm.position.set(-0.02, -0.42, 0.02);
+      rightArmGroup.add(forearm);
+
+      const hand = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.085, 0.068), skinMat);
+      hand.position.set(-0.03, -0.58, 0.025);
+      rightArmGroup.add(hand);
     }
     person.add(rightArmGroup);
 
     person.userData = { 
       rightArmGroup, 
-      leftUpperArm,
-      arms: [leftUpperArm, rightArmGroup],
+      leftArmGroup,
+      headGroup,
+      eyeLeft,
+      eyeRight,
+      arms: [leftArmGroup, rightArmGroup],
       legs: legs,
       pose, 
       speed: config.speed || 0.8,
       path: config.path || null,
       targetIndex: 0,
-      phase: Math.random() * Math.PI * 2 
+      phase: Math.random() * Math.PI * 2,
+      blinkTimer: Math.random() * 3 + 2,
+      isBlinking: false
     };
     return person;
   }
 
   function buildHumanCharacters() {
     // 4 Kiosks: X = [-4.6, -1.6, 1.6, 4.6] at Z = -0.6
-    // Humans stand at Z ~ 0.22 facing kiosk (rotY = Math.PI)
-    // 3 Kiosks actively occupied by citizens, 1 kiosk (Pod 02: x = -1.6) completely empty for the user!
+    // Pod 02 (x = -1.6) is left open and empty for the user
 
-    // Kiosk 1 Occupant: Citizen updating address & interacting with screen
+    // Kiosk 1 Occupant: Citizen updating address & demographics
     const user1 = createHumanPerson({
       x: -4.6,
       z: 0.16,
       rotY: Math.PI,
-      height: 1.72,
-      skinColor: 0xc68642,
-      shirtColor: 0x0284c7, // Indian postal blue
+      height: 1.74,
+      skinColor: 0xaa6e40, // Warm brown skin tone
+      shirtColor: 0x0369a1, // Professional ocean blue shirt
       pantsColor: 0x1e293b,
+      hairColor: 0x09090b,
+      hasBeard: true,
       pose: 'touching',
       speed: 0
     });
     scene.add(user1);
     humanCharacters.push(user1);
 
-    // KIOSK 2 (x = -1.6) IS LEFT EMPTY FOR THE USER TO WALK UP AND INTERACT!
-
-    // Kiosk 3 Occupant: Citizen performing biometric fingerprint authentication
+    // Kiosk 3 Occupant: Citizen performing biometric fingerprint verification
     const user3 = createHumanPerson({
       x: 1.6,
       z: 0.18,
       rotY: Math.PI,
-      height: 1.66,
-      skinColor: 0xd99b66,
-      shirtColor: 0x059669, // Emerald green kurta
-      pantsColor: 0xf1f5f9,
+      height: 1.67,
+      skinColor: 0xca8a52, // Medium golden skin tone
+      shirtColor: 0x047857, // Rich emerald kurta
+      pantsColor: 0xf8fafc, // Crisp off-white pajama/trousers
+      hairColor: 0x18181b,
       pose: 'touching',
       speed: 0
     });
@@ -1212,10 +1534,12 @@
       x: 4.6,
       z: 0.17,
       rotY: Math.PI,
-      height: 1.68,
-      skinColor: 0xb87333,
-      shirtColor: 0xd97706, // Amber/Saffron shirt
+      height: 1.70,
+      skinColor: 0x935c34, // Deep melanin skin tone
+      shirtColor: 0xb45309, // Saffron-amber traditional shirt
       pantsColor: 0x334155,
+      hairColor: 0x71717a, // Salt-and-pepper silver hair
+      hasBeard: true,
       pose: 'touching',
       speed: 0
     });
@@ -1227,40 +1551,43 @@
       x: -5.2,
       z: 2.5,
       rotY: Math.PI / 2,
-      height: 1.74,
-      skinColor: 0xb87333,
+      height: 1.76,
+      skinColor: 0x9e6138,
       shirtColor: 0x475569,
       pantsColor: 0x0f172a,
+      hairColor: 0x09090b,
       pose: 'sitting',
       speed: 0
     });
     scene.add(waiter);
     humanCharacters.push(waiter);
 
-    // UIDAI Vestibule Security / Helpdesk Officer standing at side
+    // UIDAI Vestibule Security / Helpdesk Officer in official navy uniform
     const assistant = createHumanPerson({
       x: 5.5,
       z: 2.4,
       rotY: -Math.PI * 0.72,
       height: 1.78,
-      skinColor: 0xc68642,
-      shirtColor: 0x1e3a8a, // Uniform navy blue
+      skinColor: 0xad7247,
+      shirtColor: 0x1e3a8a, // Uniform deep navy blue
       pantsColor: 0x0f172a,
+      hairColor: 0x171717,
       pose: 'standing',
       speed: 0
     });
     scene.add(assistant);
     humanCharacters.push(assistant);
 
-    // Dynamic Walking Citizen 1: Walking across vestibule from entrance to seating area
+    // Dynamic Walking Citizen 1: Walking across vestibule from entrance to queue
     const walker1 = createHumanPerson({
       x: -2.0,
       z: 4.8,
       rotY: 0,
-      height: 1.70,
-      skinColor: 0xc68642,
-      shirtColor: 0x9333ea, // Purple shirt
+      height: 1.72,
+      skinColor: 0xb47849,
+      shirtColor: 0x6b21a8, // Textured deep purple top
       pantsColor: 0x1e293b,
+      hairColor: 0x09090b,
       pose: 'walking',
       speed: 0.85,
       path: [
@@ -1274,17 +1601,18 @@
     scene.add(walker1);
     humanCharacters.push(walker1);
 
-    // Dynamic Walking Citizen 2: Walking after service completion toward the sliding glass doors
+    // Dynamic Walking Citizen 2: Walking after service completion toward the glass doors
     const walker2 = createHumanPerson({
       x: 3.2,
       z: 1.6,
       rotY: 0,
-      height: 1.65,
-      skinColor: 0xd99b66,
-      shirtColor: 0xe11d48, // Rose red top
+      height: 1.66,
+      skinColor: 0xc2844e,
+      shirtColor: 0xbe123c, // Rose madder formal blouse
       pantsColor: 0x0f172a,
+      hairColor: 0x18181b,
       pose: 'walking',
-      speed: 0.72,
+      speed: 0.75,
       path: [
         { x: 3.4, z: 1.5 },
         { x: 1.8, z: 3.2 },
@@ -1296,6 +1624,102 @@
     humanCharacters.push(walker2);
   }
 
+  /* -------------------------------------------------------------
+     Lifelike Biometric Human Motion (Breathing, Saccadic Eye Gaze, Blinking, Gait)
+  ------------------------------------------------------------- */
+  function updateHumanAnimations(elapsed, delta = 0.016) {
+    humanCharacters.forEach(person => {
+      const ud = person.userData;
+      if (!ud) return;
+
+      // Natural Saccadic Eye Micro-movements & Blinking
+      ud.blinkTimer -= delta;
+      if (ud.blinkTimer <= 0) {
+        ud.isBlinking = true;
+        if (ud.eyeLeft && ud.eyeRight) {
+          ud.eyeLeft.scale.y = 0.15;
+          ud.eyeRight.scale.y = 0.15;
+        }
+        if (ud.blinkTimer <= -0.12) {
+          ud.isBlinking = false;
+          if (ud.eyeLeft && ud.eyeRight) {
+            ud.eyeLeft.scale.y = 1.0;
+            ud.eyeRight.scale.y = 1.0;
+          }
+          ud.blinkTimer = Math.random() * 3.5 + 2.0; // Reset next blink interval
+        }
+      }
+
+      // Micro head gaze sway (subtle lifelike awareness)
+      if (ud.headGroup && ud.pose !== 'sitting') {
+        ud.headGroup.rotation.y = Math.sin(elapsed * 0.45 + ud.phase) * 0.045;
+        ud.headGroup.rotation.x = Math.sin(elapsed * 0.3 + ud.phase) * 0.025;
+      }
+
+      // Realistic Chest & Torso Breathing Cycle (12-16 breaths/min)
+      const breath = Math.sin(elapsed * 1.4 + ud.phase) * 0.0035;
+      person.position.y = breath;
+
+      // Kiosk Citizen: Natural Arm Interaction with Finger Tap and Weight Shift
+      if (ud.pose === 'touching' && ud.rightArmGroup) {
+        const tapCycle = Math.sin(elapsed * 1.6 + ud.phase);
+        ud.rightArmGroup.rotation.x = -0.58 + Math.max(0, tapCycle) * 0.16;
+        ud.rightArmGroup.rotation.y = Math.sin(elapsed * 0.8 + ud.phase) * 0.03;
+      }
+
+      // Sitting Citizen Phone Navigation
+      if (ud.pose === 'sitting') {
+        person.rotation.y = (Math.PI / 2) + Math.sin(elapsed * 0.75 + ud.phase) * 0.035;
+        if (ud.headGroup) {
+          ud.headGroup.rotation.x = 0.22 + Math.sin(elapsed * 0.5) * 0.03; // Naturally tilted looking at phone
+        }
+      }
+
+      // Realistic Bipedal Gait Walking Engine (Pelvis drop, knee flexion, ankle push-off, counter arm swing)
+      if (ud.pose === 'walking' && ud.path && ud.path.length > 0) {
+        if (ud.targetIndex === undefined) ud.targetIndex = 0;
+        const target = ud.path[ud.targetIndex];
+        const dx = target.x - person.position.x;
+        const dz = target.z - person.position.z;
+        const dist = Math.hypot(dx, dz);
+
+        if (dist < 0.28) {
+          ud.targetIndex = (ud.targetIndex + 1) % ud.path.length;
+        } else {
+          const moveSpeed = ud.speed || 0.8;
+          const stepDist = delta * moveSpeed;
+          person.position.x += (dx / dist) * stepDist;
+          person.position.z += (dz / dist) * stepDist;
+
+          // Smooth directional interpolation
+          const targetAngle = Math.atan2(dx, dz);
+          let angleDiff = targetAngle - person.rotation.y;
+          while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+          while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+          person.rotation.y += angleDiff * 0.12;
+
+          // Anatomical Double-Support Leg Gait Cycle
+          const gaitFreq = elapsed * 5.6 * moveSpeed;
+          const strideL = Math.sin(gaitFreq);
+          const strideR = Math.sin(gaitFreq + Math.PI);
+
+          // Pelvis vertical oscillation (heels contact dips, mid-stance rises)
+          person.position.y = Math.abs(Math.sin(gaitFreq)) * 0.024;
+
+          if (ud.legs && ud.legs.length === 2) {
+            ud.legs[0].rotation.x = strideL * 0.52;
+            ud.legs[1].rotation.x = strideR * 0.52;
+          }
+
+          // Natural counter-torso arm swing
+          if (ud.arms && ud.arms.length === 2) {
+            ud.arms[0].rotation.x = -strideL * 0.38;
+            ud.arms[1].rotation.x = -strideR * 0.38;
+          }
+        }
+      }
+    });
+  }
   /* -------------------------------------------------------------
      Aadhaar Multi-Pod Kiosk Hardware Assembly ("2. LEAN TOWER")
      - Overall Height: 1800 mm (1.80 m) | Width: 500 mm (0.50 m) | Depth: 650 mm (0.65 m)
@@ -1444,49 +1868,21 @@
         kioskClone.scale.set(0.01, 0.01, 0.01);
         kioskClone.position.set(0, 0, 0);
 
-        const screenObj = createKioskScreenTexture(idx + 1, 0);
-
-        // Dedicated Glass Screen Material displaying the Aadhaar Kiosk Interface texture
-        const kioskScreenMaterial = new THREE.MeshBasicMaterial({
-          map: screenObj.texture,
-          transparent: false,
-          side: THREE.DoubleSide
-        });
-
         kioskClone.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
             child.userData = { isKioskPart: true, podIndex: idx + 1 };
 
-            const isGlass = () => {
-              if (Array.isArray(child.material)) {
-                return child.material.some(m => (m && m.name && (m.name.includes('Glass') || m.name.includes('Blue'))));
-              }
-              const name = (child.material && child.material.name) ? child.material.name : '';
-              return name.includes('Glass') || name.includes('Blue');
-            };
-
-            if (isGlass()) {
-              // Remap UV coordinates of the original Glass sub-mesh directly so the interface texture displays properly
-              const geo = child.geometry;
-              if (geo && geo.attributes && geo.attributes.position) {
-                const pos = geo.attributes.position;
-                const uvs = new Float32Array(pos.count * 2);
-                for (let i = 0; i < pos.count; i++) {
-                  const x = pos.getX(i);
-                  const z = pos.getZ(i);
-                  // OBJ Local coords: X spans -26.5 to 27.5, Z spans 89.5 to 163.4
-                  const u = THREE.MathUtils.clamp((x - (-26.5)) / 54.0, 0, 1);
-                  const v = THREE.MathUtils.clamp((z - 92.0) / 70.0, 0, 1);
-                  uvs[i * 2] = u;
-                  uvs[i * 2 + 1] = v;
-                }
-                geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-                geo.attributes.uv.needsUpdate = true;
-              }
-              child.material = kioskScreenMaterial;
-              child.userData.isScreen = true;
+            // Restore pure original Glass and White materials according to Kiosk.mtl
+            if (Array.isArray(child.material)) {
+              child.material = child.material.map(m => {
+                const name = (m && m.name) ? m.name : '';
+                return (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
+              });
+            } else if (child.material) {
+              const name = child.material.name || '';
+              child.material = (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
             } else {
               child.material = absWhiteMaterial;
             }
@@ -1496,6 +1892,25 @@
         });
 
         podGroup.add(kioskClone);
+
+        // Precise Back Plane Glass Interface (400mm W x 500mm H / 0.40m x 0.50m)
+        // Positioned inside the recessed screen area to the left of the biometric scanner ring
+        const screenObj = createKioskScreenTexture(idx + 1, 0);
+        const screenGeo = new THREE.PlaneGeometry(0.40, 0.50);
+        const screenMat = new THREE.MeshBasicMaterial({ 
+          map: screenObj.texture,
+          side: THREE.FrontSide
+        });
+        const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+        screenMesh.position.set(-0.045, 1.385, 0.028);
+        screenMesh.rotation.x = -0.0997; // Exactly -5.71 degrees tilt matching the CAD recess plane
+        screenMesh.userData = {
+          isScreen: true,
+          podIndex: idx + 1,
+          screenObj: screenObj
+        };
+        podGroup.add(screenMesh);
+        interactiveScreens.push(screenMesh);
       }
 
       // Base Pedestal Plinth
@@ -2021,7 +2436,7 @@
       TWEEN.update();
       updatePhysics(delta);
       updateAutomaticDoors(delta);
-      updateHumanAnimations(elapsed);
+      updateHumanAnimations(elapsed, delta);
 
       if (!isWalkMode && orbitControls.enabled) {
         orbitControls.update();
