@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UIDAI Kiosk Prototype (4:5 Portrait - 400x500mm)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style type="text/tailwindcss">
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; top: 0 !important; position: static !important; }
+    
+    /* Hide Google Translate UI elements to keep kiosk clean */
+    .skiptranslate { display: none !important; }
+    #goog-gt-tt, .goog-te-banner-frame { display: none !important; }
+    .goog-tooltip { display: none !important; }
+    .goog-tooltip:hover { display: none !important; }
+    .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+    
+    .screen-fade { animation: fadeIn 0.2s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .pattern-bg { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 32px 32px; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .menu-card { 
+      @apply text-center p-6 rounded-2xl flex flex-col items-center justify-center gap-4 transition-all shadow-sm cursor-pointer hover:shadow-md; 
+    }
+    .menu-card h2 { @apply text-2xl font-bold text-slate-800 leading-snug; }
+    
+    .input-field { 
+      @apply w-full p-4 text-xl font-medium border border-slate-300 rounded-xl focus:outline-none focus:border-[#6d6ca2] focus:ring-1 focus:ring-[#6d6ca2] bg-white transition-all text-slate-800 placeholder-slate-400; 
+    }
+    select.input-field { @apply appearance-none bg-white cursor-pointer; }
+
+    .btn-primary { 
+      @apply w-full max-w-sm mx-auto py-4 text-xl font-bold rounded-xl active:scale-[0.98] transition-all shadow-md disabled:shadow-none disabled:active:scale-100; 
+    }
+    .btn-secondary {
+      @apply w-full max-w-sm mx-auto py-4 bg-white text-slate-700 border border-slate-300 text-xl font-bold rounded-xl active:bg-slate-50 transition-all shadow-sm;
+    }
+
+    @keyframes attractPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 10px 25px -5px rgba(109, 108, 162, 0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 25px 50px -12px rgba(109, 108, 162, 0.6); }
+    }
+    .attract-anim { animation: attractPulse 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen p-4 sm:p-8">
+
+<!-- Hidden Google Translate Element -->
+<div id="google_translate_element" class="hidden"></div>
+
+<div class="hidden bg-indigo-50 border-[#6d6ca2] ring-2 ring-[#6d6ca2] bg-white border-slate-200 bg-[#6d6ca2] text-white bg-slate-300 text-slate-500 border-solid border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-sky-50 hover:border-sky-600 bg-sky-50 bg-sky-100"></div>
+
+<!-- Kiosk Bezel (4:5 Portrait / 400mm horizontal x 500mm vertical) -->
+<div class="relative w-full max-w-[640px] aspect-[4/5] bg-black rounded-[3rem] p-4 shadow-2xl flex-shrink-0">
+  
+  <!-- Screen container -->
+  <div class="relative w-full h-full bg-[#f5eae7] rounded-[2.25rem] overflow-hidden flex flex-col border border-slate-800">
+    
+    <!-- Top Progress Bar -->
+    <header id="top-progress" class="hidden flex-none bg-white border-b border-slate-200 px-10 py-4 z-20 shadow-sm transition-all duration-300 notranslate">
+       <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+          <div id="progress-fill" class="h-full bg-emerald-500 transition-all duration-700 ease-out" style="width: 25%;"></div>
+       </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="flex-1 relative overflow-y-auto no-scrollbar bg-[#f5eae7]">
+      
+      <!-- SCREEN 01: Idle -->
+      <div id="screen-01" class="screen absolute inset-0 flex flex-col items-center justify-center pattern-bg bg-[#f5eae7] p-8 screen-fade text-center">
+        <div class="w-32 h-32 bg-[#6d6ca2] rounded-full flex items-center justify-center text-white font-bold text-6xl shadow-lg mb-10 notranslate attract-anim">A</div>
+        <h1 class="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Your Aadhaar Services,<br/>Made Simple</h1>
+        <p class="text-xl text-slate-500 font-medium mb-16">Access and manage your Aadhaar securely.</p>
+        <button onclick="navigateTo('screen-doc-select')" class="btn-primary bg-[#6d6ca2] text-white max-w-xs shadow-lg text-2xl py-5 attract-anim">
+          <span id="tap-to-begin-text" class="transition-opacity duration-500 notranslate block">TAP TO BEGIN</span>
+        </button>
+      </div>
+
+      <!-- SCREEN DOC SELECT: Choose Service (4 grid options) -->
+      <div id="screen-doc-select" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center">
+        <div class="mb-12 text-center">
+          <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Select a Document Service</h1>
+          <p class="text-xl font-medium text-slate-600">Which document would you like to access today?</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
+          <!-- Aadhaar (Active) -->
+          <button onclick="navigateTo('screen-02')" class="menu-card bg-white border border-slate-200 py-12 hover:border-[#6d6ca2] hover:shadow-lg transition-all group">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 group-hover:bg-indigo-50 transition-colors notranslate">🆔</div>
+            <h2 class="text-3xl font-bold text-slate-800">Aadhaar</h2>
+          </button>
+          
+          <!-- PAN Card (Inactive) -->
+          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">💳</div>
+            <h2 class="text-3xl text-slate-500 font-bold">PAN Card</h2>
+            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
+          </div>
+
+          <!-- Passport (Inactive) -->
+          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">🛂</div>
+            <h2 class="text-3xl text-slate-500 font-bold">Passport</h2>
+            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
+          </div>
+
+          <!-- Ayushman (Inactive) -->
+          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">🏥</div>
+            <h2 class="text-3xl text-slate-500 font-bold">Ayushman</h2>
+            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 02: Language Selection (notranslate to preserve language names) -->
+      <div id="screen-02" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center notranslate">
+        <div class="mb-10 mt-6 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900">Choose your preferred language</h1>
+        </div>
+        <div class="grid grid-cols-3 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
+          <button onclick="selectLanguageCard(this, 'en')" class="menu-card bg-white border border-slate-200 py-10"><h2>English</h2></button>
+          <button onclick="selectLanguageCard(this, 'hi')" class="menu-card bg-white border border-slate-200 py-10"><h2>हिंदी</h2></button>
+          <button onclick="selectLanguageCard(this, 'mr')" class="menu-card bg-white border border-slate-200 py-10"><h2>मराठी</h2></button>
+          <button onclick="selectLanguageCard(this, 'gu')" class="menu-card bg-white border border-slate-200 py-10"><h2>ગુજરાતી</h2></button>
+          <button onclick="selectLanguageCard(this, 'bn')" class="menu-card bg-white border border-slate-200 py-10"><h2>বাংলা</h2></button>
+          <button onclick="selectLanguageCard(this, 'ta')" class="menu-card bg-white border border-slate-200 py-10"><h2>தமிழ்</h2></button>
+        </div>
+        <div class="mt-auto pb-4">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 03: Main Service Menu -->
+      <div id="screen-03" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-10 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">My Aadhaar Services</h1>
+          <p class="text-lg text-slate-600 font-medium">What would you like to do today?</p>
+        </div>
+        <div class="grid grid-cols-3 gap-8 mb-10 max-w-5xl mx-auto w-full flex-1 content-center">
+          <button onclick="selectCard(this, 'screen-04')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
+            <h2 class="text-3xl">Get Aadhaar</h2>
+          </button>
+          <button onclick="selectCard(this, 'screen-05')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
+            <h2 class="text-3xl">Update Details</h2>
+          </button>
+          <button onclick="selectCard(this, 'screen-06')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
+            <h2 class="text-3xl">Status & Security</h2>
+          </button>
+        </div>
+        <div class="mt-auto pb-4">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 04: Get Aadhaar Menu -->
+      <div id="screen-04" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-10 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Get Aadhaar</h1>
+          <p class="text-lg text-slate-600 font-medium">Choose what you would like to do.</p>
+        </div>
+        <div class="grid grid-cols-3 gap-8 mb-10 max-w-5xl mx-auto w-full flex-1 content-center">
+          <button onclick="selectCard(this, 'auth:screen-08')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
+            <h2>Download Aadhaar (PDF)</h2>
+          </button>
+          <button onclick="selectCard(this, 'auth:screen-10')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
+            <h2>Order Aadhaar PVC Card</h2>
+          </button>
+          <button onclick="selectCard(this, 'screen-11')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
+            <h2>Check PVC Card Status</h2>
+          </button>
+        </div>
+        <div class="mt-auto pb-4">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 05: Update Details Menu -->
+      <div id="screen-05" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-10 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Aadhaar Details</h1>
+          <p class="text-lg text-slate-600 font-medium">Select the information you wish to update.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
+          <button onclick="selectCard(this, 'auth:screen-12-input')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
+            <h2>Address Update</h2>
+          </button>
+          <button onclick="selectCard(this, 'auth:screen-13')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
+            <h2>Demographic Data (Name/DOB/Gender)</h2>
+          </button>
+          <button onclick="selectCard(this, 'auth:screen-14')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
+            <h2>Document Update (POI/POA)</h2>
+          </button>
+          <button onclick="selectCard(this, 'screen-15')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
+            <h2>Check Update Status</h2>
+          </button>
+        </div>
+        <div class="mt-auto pb-4">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 06: Status & Security Menu -->
+      <div id="screen-06" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-10 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Status & Security</h1>
+          <p class="text-lg text-slate-600 font-medium">Manage and protect your Aadhaar.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
+          <button onclick="selectCard(this, 'screen-15')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
+            <h2>Check Enrolment & Update Status</h2>
+          </button>
+          <button onclick="selectCard(this, 'auth:screen-16')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
+            <h2>Lock / Unlock Aadhaar</h2>
+          </button>
+          <button onclick="selectCard(this, 'auth:screen-17')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
+            <h2>Lock / Unlock Biometrics</h2>
+          </button>
+          <button onclick="selectCard(this, 'auth:screen-18')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
+            <h2>Virtual ID (VID) Generator</h2>
+          </button>
+        </div>
+        <div class="mt-auto pb-4">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 07: Authentication (Dynamic 3-Step) -->
+      <div id="screen-07" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-8 mt-2 text-center">
+          <h1 id="auth-title" class="text-3xl font-extrabold text-slate-900 mb-2">Verify your identity</h1>
+          <p id="auth-subtitle" class="text-lg text-slate-600 font-medium">Enter the last 4 digits of your Aadhaar Number.</p>
+        </div>
+        
+        <div id="auth-input-container" class="flex justify-center items-center mb-8 bg-white border-2 border-slate-300 rounded-2xl shadow-inner max-w-lg mx-auto py-6 min-h-[104px] notranslate">
+          <!-- Populated dynamically via JS based on authStep -->
+        </div>
+
+        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center mb-8 max-w-sm mx-auto">
+          <p class="text-sm text-slate-500 font-medium">Data is securely processed and not stored locally.</p>
+        </div>
+
+        <!-- Keypad (Landscape format, compacted) -->
+        <div class="grid grid-cols-5 gap-3 max-w-lg mx-auto w-full mb-4 notranslate">
+          <button onclick="typePin('1')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">1</button>
+          <button onclick="typePin('2')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">2</button>
+          <button onclick="typePin('3')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">3</button>
+          <button onclick="typePin('4')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">4</button>
+          <button onclick="typePin('5')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">5</button>
+          <button onclick="typePin('6')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">6</button>
+          <button onclick="typePin('7')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">7</button>
+          <button onclick="typePin('8')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">8</button>
+          <button onclick="typePin('9')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">9</button>
+          <button onclick="typePin('0')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">0</button>
+          
+          <button onclick="typePin('clear')" class="col-span-1 p-4 text-lg font-bold bg-slate-200 border border-slate-300 rounded-xl active:bg-slate-300 text-slate-700 transition-colors translate">Clear</button>
+          <button onclick="typePin('del')" class="col-span-1 p-4 text-2xl font-bold bg-slate-200 border border-slate-300 rounded-xl active:bg-slate-300 text-slate-700 transition-colors">⌫</button>
+          <button id="auth-btn" disabled onclick="submitAuth()" class="col-span-3 p-4 text-lg font-bold bg-slate-300 text-slate-500 rounded-xl transition-colors translate">Continue</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 08: Get Digital Copy -->
+      <div id="screen-08" class="screen hidden absolute inset-0 flex flex-col items-center justify-center p-10 bg-[#f5eae7] screen-fade text-center">
+        <h1 class="text-4xl font-extrabold text-slate-900 mb-8">Download Aadhaar</h1>
+        <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm mb-10 max-w-lg w-full">
+          <p class="text-xl font-medium text-slate-600 mb-4">Your digital copy will be securely sent to:</p>
+          <h2 class="text-2xl font-bold text-slate-900 mb-2">Registered Mobile (WhatsApp)</h2>
+          <p class="text-3xl font-bold text-slate-800 tracking-wide notranslate">+91 XXXXX 12345</p>
+          <div class="mt-6 flex items-center justify-center gap-3">
+             <input type="checkbox" id="masked-aadhaar" class="w-6 h-6 rounded border-slate-300 text-[#6d6ca2] focus:ring-[#6d6ca2]">
+             <label for="masked-aadhaar" class="text-lg font-medium text-slate-700">Download Masked Aadhaar?</label>
+          </div>
+        </div>
+        <div class="flex gap-4 w-full max-w-lg">
+          <button onclick="goBack()" class="btn-secondary">Cancel</button>
+          <button onclick="navigateTo('screen-09')" class="btn-primary bg-[#6d6ca2] text-white m-0">Send PDF</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 09: Digital Copy Confirmation -->
+      <div id="screen-09" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade items-center justify-center text-center">
+        <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Request Processed</h1>
+        <p class="text-xl font-medium text-slate-600 mb-10 max-w-lg">Your Aadhaar PDF has been successfully generated and delivered to your registered number.</p>
+        
+        <div class="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-center mb-12 max-w-lg">
+          <p class="text-base text-slate-600 font-medium">Ensure your device is secure before opening the document. Password is 8 characters (first 4 letters of name + YYYY).</p>
+        </div>
+
+        <button onclick="goHome()" class="btn-secondary">Return to Services</button>
+      </div>
+
+      <!-- SCREEN 10: Order PVC Card -->
+      <div id="screen-10" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-8 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Order Aadhaar PVC Card</h1>
+          <div class="flex items-center justify-center gap-4 text-base font-semibold text-slate-400">
+             <span class="text-[#6d6ca2]">1. Verify Details</span> <span class="notranslate">-</span> <span>2. Payment (₹50)</span>
+          </div>
+        </div>
+        
+        <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm mb-8 max-w-2xl mx-auto w-full text-left">
+          <h3 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-6">Demographic Preview</h3>
+          <div class="grid grid-cols-2 gap-6 mb-6">
+            <div>
+              <p class="text-sm text-slate-500 uppercase font-bold mb-1">Name</p>
+              <p class="text-xl font-bold text-slate-900 notranslate">Rahul Sharma</p>
+            </div>
+            <div>
+              <p class="text-sm text-slate-500 uppercase font-bold mb-1">Aadhaar Number</p>
+              <p class="text-xl font-bold text-slate-900 tracking-widest notranslate">XXXX XXXX 1234</p>
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-slate-500 uppercase font-bold mb-1">Delivery Address</p>
+            <p class="text-lg font-medium text-slate-700 leading-snug notranslate">Flat 402, Block B, Green Valley Apts,<br/>Andheri East, Mumbai, 400069, Maharashtra</p>
+          </div>
+        </div>
+
+        <button onclick="confirmAction('PVC Card Ordered', 'Order SRN: SRN8472938475. Payment Successful.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
+          Proceed to Payment (₹50)
+        </button>
+      </div>
+
+      <!-- SCREEN 11 / 15: Check Status -->
+      <div id="screen-11" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-10 mt-8 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Check Request Status</h1>
+          <p class="text-lg font-medium text-slate-600">Enter your Service Request Number (SRN/URN).</p>
+        </div>
+
+        <input type="text" placeholder="Enter SRN / URN" value="SRN8472938475" readonly class="input-field max-w-xl mx-auto text-center notranslate" />
+
+        <div class="flex-1 bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center mb-8 max-w-3xl mx-auto w-full shadow-inner">
+           <span class="text-slate-400 font-bold text-xl">[ Touch Keyboard Area ]</span>
+        </div>
+
+        <button onclick="showStatusTimeline()" class="btn-primary bg-[#6d6ca2] text-white mb-4">Check Status</button>
+      </div>
+
+      <!-- SCREEN 12-INPUT: Address Update Form -->
+      <div id="screen-12-input" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-6 mt-2 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Address</h1>
+          <p class="text-lg font-medium text-slate-600">Fill in the details as per your Proof of Address (POA) document.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 max-w-4xl mx-auto w-full flex-1 overflow-y-auto pr-4 mb-4 pb-4">
+           <input type="text" id="addr-co" class="input-field col-span-2" placeholder="Care of (C/o)">
+           <input type="text" id="addr-house" class="input-field" placeholder="House/Bldg/Apt">
+           <input type="text" id="addr-street" class="input-field" placeholder="Street/Road/Lane">
+           <input type="text" id="addr-area" class="input-field" placeholder="Area/Locality/Sector">
+           <input type="text" id="addr-landmark" class="input-field" placeholder="Landmark">
+           <input type="text" id="addr-pincode" class="input-field" placeholder="Pincode">
+           <input type="text" id="addr-city" class="input-field" placeholder="Village/Town/City">
+           <input type="text" id="addr-district" class="input-field" placeholder="District">
+           <input type="text" id="addr-state" class="input-field" placeholder="State">
+           <!-- Document Upload for Address (POA) -->
+           <div class="col-span-2 mt-2">
+               <select id="addr-poa" onchange="checkDocSelection('addr-poa', 'btn-addr-poa')" class="input-field mb-3 text-slate-700 text-lg">
+                 <option value="">Select Valid Supporting Document (POA)</option>
+                 <option>Bank Account / Post Office Passbook or Statement</option>
+                 <option>Voter ID / e-Voter ID</option>
+                 <option>Passport</option>
+                 <option>Ration Card</option>
+                 <option>Driving License</option>
+                 <option>Electricity Bill (not older than 3 months)</option>
+                 <option>Water Bill (not older than 3 months)</option>
+                 <option>Gas Connection Bill (not older than 3 months)</option>
+                 <option>Telephone / Broadband Bill (not older than 3 months)</option>
+                 <option>Registered Lease / Rent / Sale Agreement</option>
+                 <option>Property Tax Receipt (not older than 1 year)</option>
+                 <option>Allotment Letter of Accommodation (Govt)</option>
+               </select>
+               <button id="btn-addr-poa" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
+                 <span class="text-2xl notranslate">📸</span>
+                 <span>Provide POA Document</span>
+              </button>
+           </div>
+        </div>
+
+        <button onclick="navigateTo('screen-12-verify')" class="btn-primary bg-[#6d6ca2] text-white mt-2 mb-2">Review Details</button>
+      </div>
+
+      <!-- SCREEN 12-VERIFY: Address Verify -->
+      <div id="screen-12-verify" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-10 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Verify Address Details</h1>
+          <p class="text-lg font-medium text-slate-600">Please review your changes before submitting.</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-3xl mx-auto w-full text-left">
+          <p class="text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">New Address Preview</p>
+          <p id="verify-address-text" class="text-2xl font-bold text-slate-900 leading-relaxed notranslate">
+            <!-- Populated via JS -->
+            123, Sample Street, New Delhi
+          </p>
+          <div class="mt-6 pt-6 border-t border-slate-100 flex items-center gap-4">
+              <span class="text-2xl notranslate">📄</span>
+              <div>
+                  <p class="text-sm font-bold text-slate-500">Document Attached</p>
+                  <p class="text-base font-semibold text-slate-800">Ready for submission</p>
+              </div>
+          </div>
+        </div>
+
+        <button onclick="confirmAction('Address Update Request Submitted', 'URN: URN9485739281. Keep this for tracking.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
+          Proceed to Payment (₹50)
+        </button>
+      </div>
+
+      <!-- SCREEN 13: Demographic Update Selection -->
+      <div id="screen-13" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-10 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Demographic Data</h1>
+          <p class="text-lg font-medium text-slate-600">Select the specific field you wish to update.</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
+          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('name');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
+            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
+            <h2 class="text-3xl">Name</h2>
+          </button>
+          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('dob');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
+            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
+            <h2 class="text-3xl">Date of Birth</h2>
+          </button>
+          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('gender');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
+            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
+            <h2 class="text-3xl">Gender</h2>
+          </button>
+        </div>
+
+        <div class="mt-auto pb-4">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 13-INPUT: Demographic Forms -->
+      <div id="screen-13-input" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-8 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Enter New Details</h1>
+          <p class="text-lg font-medium text-slate-600">Provide the correct information and supporting documents.</p>
+        </div>
+
+        <div class="max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center mb-8">
+          
+          <!-- NAME FORM (Needs POI) -->
+          <div id="dynamic-form-name" class="hidden flex-col gap-5 w-full">
+             <input type="text" id="input-name" class="input-field notranslate" placeholder="Enter New Full Name (as per POI)">
+             <select id="doc-name" onchange="checkDocSelection('doc-name', 'btn-doc-name')" class="input-field text-slate-700 text-lg">
+               <option value="">Select Valid Supporting Document (POI)</option>
+               <option>Passport</option>
+               <option>PAN Card / e-PAN</option>
+               <option>Voter ID / e-Voter ID</option>
+               <option>Driving License</option>
+               <option>Ration / PDS Photo Card</option>
+               <option>Service Photo ID Card (Govt / PSU)</option>
+               <option>Pensioner Photo Card</option>
+               <option>CGHS / ECHS Photo Card</option>
+               <option>Kisan Photo Passbook</option>
+               <option>Marriage Certificate with Photograph</option>
+             </select>
+             <button id="btn-doc-name" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
+                 <span class="text-2xl notranslate">📸</span><span>Provide POI Document</span>
+             </button>
+          </div>
+
+          <!-- DOB FORM (Needs DOB Document) -->
+          <div id="dynamic-form-dob" class="hidden flex-col gap-5 w-full">
+             <input type="date" id="input-dob" class="input-field text-slate-600 notranslate">
+             <select id="doc-dob" onchange="checkDocSelection('doc-dob', 'btn-doc-dob')" class="input-field text-slate-700 text-lg">
+               <option value="">Select Valid Supporting Document (DOB)</option>
+               <option>Birth Certificate</option>
+               <option>Passport</option>
+               <option>PAN Card / e-PAN</option>
+               <option>Mark Sheet / Certificate (Recognized Board or University)</option>
+               <option>Service Photo ID Card (Govt / PSU)</option>
+               <option>Central / State Pension Payment Order</option>
+               <option>Transgender ID Card / Certificate</option>
+             </select>
+             <button id="btn-doc-dob" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
+                 <span class="text-2xl notranslate">📸</span><span>Provide DOB Document</span>
+             </button>
+          </div>
+
+          <!-- GENDER FORM (No document required usually for general correction, but based on conditions) -->
+          <div id="dynamic-form-gender" class="hidden flex justify-center gap-6 w-full">
+             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Male')"><h2>Male</h2></button>
+             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Female')"><h2>Female</h2></button>
+             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Transgender')"><h2>Transgender</h2></button>
+          </div>
+          
+        </div>
+
+        <!-- Continue Button (Enabled by JS for gender, always on for inputs) -->
+        <button id="btn-demo-continue" onclick="navigateTo('screen-13-verify')" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">Review Details</button>
+      </div>
+
+      <!-- SCREEN 13-VERIFY: Demographic Verify -->
+      <div id="screen-13-verify" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-10 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Verify Updated Details</h1>
+          <p class="text-lg font-medium text-slate-600">Please review your changes before submitting.</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-3xl mx-auto w-full text-left">
+          <p id="verify-info-label" class="text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">New Detail Preview</p>
+          <p id="verify-info-text" class="text-3xl font-bold text-slate-900 leading-relaxed notranslate">
+            <!-- Populated via JS -->
+            Rahul K Sharma
+          </p>
+          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center gap-4">
+              <span class="text-2xl notranslate">📄</span>
+              <div>
+                  <p class="text-sm font-bold text-slate-500">Supporting Document Attached</p>
+                  <p class="text-base font-semibold text-slate-800">Ready for submission</p>
+              </div>
+          </div>
+        </div>
+
+        <button onclick="confirmAction('Update Request Submitted', 'URN: URN8827364521. Keep this URN to track status.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
+          Proceed to Payment (₹50)
+        </button>
+      </div>
+      
+      <!-- SCREEN 14: Document Update Form -->
+      <div id="screen-14" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
+        <div class="mb-8 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Document Update (POI & POA)</h1>
+          <p class="text-lg font-medium text-slate-600">Submit updated Proof of Identity and Proof of Address documents.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 w-full max-w-5xl mx-auto flex-1 mb-8">
+           <!-- POI -->
+           <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+              <h3 class="text-xl font-bold text-slate-800 mb-4">Proof of Identity (POI)</h3>
+              <select id="doc-14-poi" onchange="checkDocSelection('doc-14-poi', 'btn-14-poi')" class="input-field mb-6 text-lg text-slate-700">
+                <option value="">Select Valid Supporting Document (POI)</option>
+                <option>Passport</option>
+                <option>PAN Card / e-PAN</option>
+                <option>Voter ID / e-Voter ID</option>
+                <option>Driving License</option>
+                <option>Ration / PDS Photo Card</option>
+                <option>Service Photo ID Card (Govt / PSU)</option>
+                <option>Pensioner Photo Card</option>
+                <option>CGHS / ECHS Photo Card</option>
+                <option>Kisan Photo Passbook</option>
+                <option>Marriage Certificate with Photograph</option>
+              </select>
+              <button id="btn-14-poi" disabled onclick="openUploadModal(this)" type="button" class="mt-auto py-8 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-50 flex flex-col items-center justify-center gap-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
+                 <span class="text-4xl notranslate">📸</span>
+                 <span class="text-lg">Provide POI Document</span>
+              </button>
+           </div>
+           <!-- POA -->
+           <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+              <h3 class="text-xl font-bold text-slate-800 mb-4">Proof of Address (POA)</h3>
+              <select id="doc-14-poa" onchange="checkDocSelection('doc-14-poa', 'btn-14-poa')" class="input-field mb-6 text-lg text-slate-700">
+                <option value="">Select Valid Supporting Document (POA)</option>
+                <option>Bank Account / Post Office Passbook or Statement</option>
+                <option>Voter ID / e-Voter ID</option>
+                <option>Passport</option>
+                <option>Ration Card</option>
+                <option>Driving License</option>
+                <option>Electricity Bill (not older than 3 months)</option>
+                <option>Water Bill (not older than 3 months)</option>
+                <option>Gas Connection Bill (not older than 3 months)</option>
+                <option>Telephone / Broadband Bill (not older than 3 months)</option>
+                <option>Registered Lease / Rent / Sale Agreement</option>
+                <option>Property Tax Receipt (not older than 1 year)</option>
+                <option>Allotment Letter of Accommodation (Govt)</option>
+              </select>
+              <button id="btn-14-poa" disabled onclick="openUploadModal(this)" type="button" class="mt-auto py-8 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-50 flex flex-col items-center justify-center gap-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
+                 <span class="text-4xl notranslate">📸</span>
+                 <span class="text-lg">Provide POA Document</span>
+              </button>
+           </div>
+        </div>
+
+        <div class="mt-auto pb-4">
+          <button onclick="confirmAction('Document Update Submitted', 'SRN: DOC928374001. Verification in progress.', true)" class="btn-primary bg-[#6d6ca2] text-white">Proceed to Payment (₹50)</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 16: Lock / Unlock Aadhaar -->
+      <div id="screen-16" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center items-center">
+        <h1 class="text-3xl font-extrabold text-slate-900 mb-10">Aadhaar Lock Status</h1>
+        
+        <div class="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm mb-12 flex flex-col items-center max-w-xl w-full">
+          <h2 class="text-4xl font-black text-slate-900 mb-4 tracking-wide text-emerald-700">UNLOCKED</h2>
+          <p class="text-lg font-medium text-slate-600">Your Aadhaar is currently active and can be used for authentication.</p>
+        </div>
+
+        <button onclick="confirmAction('Aadhaar Locked Successfully', 'Your Aadhaar number is secured and cannot be used for authentication until unlocked.')" class="w-full max-w-sm mx-auto py-4 bg-slate-800 text-white text-xl font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-md">
+          Lock Aadhaar
+        </button>
+      </div>
+
+      <!-- SCREEN 17: Lock / Unlock Biometrics -->
+      <div id="screen-17" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center items-center">
+        <h1 class="text-3xl font-extrabold text-slate-900 mb-10">Biometric Lock Status</h1>
+        
+        <div class="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm mb-12 flex flex-col items-center max-w-xl w-full">
+          <h2 class="text-4xl font-black text-slate-900 mb-4 tracking-wide text-emerald-700">UNLOCKED</h2>
+          <p class="text-lg font-medium text-slate-600">Your fingerprints and iris scan can be used for authentication.</p>
+        </div>
+
+        <button onclick="confirmAction('Biometrics Locked Successfully', 'Biometric authentication is disabled to prevent misuse.')" class="w-full max-w-sm mx-auto py-4 bg-slate-800 text-white text-xl font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-md">
+          Lock Biometrics
+        </button>
+      </div>
+
+      <!-- SCREEN 18: Generate Virtual ID -->
+      <div id="screen-18" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center justify-center">
+        <h1 class="text-3xl font-extrabold text-slate-900 mb-4">Virtual ID (VID) Generator</h1>
+        <p class="text-lg font-medium text-slate-600 px-4 max-w-2xl mb-10">A Virtual ID is a temporary, revocable 16-digit number mapped to your Aadhaar. It can be used securely in place of your Aadhaar number.</p>
+
+        <div id="vid-result" class="hidden bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-xl w-full text-center">
+          <p class="text-sm text-slate-500 font-bold uppercase tracking-widest mb-4">Your New Virtual ID</p>
+          <p class="text-4xl font-black text-slate-900 tracking-widest notranslate">9482 1039 4857 2011</p>
+        </div>
+
+        <button id="vid-gen-btn" onclick="generateVID()" class="btn-primary bg-[#6d6ca2] text-white w-full max-w-sm">
+          Generate Virtual ID
+        </button>
+        <button id="vid-finish-btn" onclick="goHome()" class="hidden btn-secondary">
+          Finish
+        </button>
+      </div>
+
+      <!-- SCREEN 21: Payment Options -->
+      <div id="screen-21" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center">
+        
+        <div id="payment-selection-view" class="w-full flex-1 flex flex-col">
+            <div class="mb-8 mt-4 text-center">
+              <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Select Payment Method</h1>
+              <p class="text-lg font-medium text-slate-600">Amount Due: <span class="font-bold text-[#6d6ca2] text-2xl ml-1 notranslate">₹50.00</span></p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-5 max-w-xl mx-auto w-full flex-1 content-start pb-8">
+               <!-- UPI -->
+               <button onclick="processPayment('UPI')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
+                  <div class="flex items-center gap-5">
+                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">📱</div>
+                     <div class="text-left">
+                        <h3 class="text-xl font-bold text-slate-800">UPI / QR Code</h3>
+                        <p class="text-sm text-slate-500 font-medium mt-1">Google Pay, PhonePe, Paytm, etc.</p>
+                     </div>
+                  </div>
+                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
+               </button>
+               <!-- Card -->
+               <button onclick="processPayment('Credit/Debit Card')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
+                  <div class="flex items-center gap-5">
+                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">💳</div>
+                     <div class="text-left">
+                        <h3 class="text-xl font-bold text-slate-800">Credit / Debit Card</h3>
+                        <p class="text-sm text-slate-500 font-medium mt-1">Visa, Mastercard, RuPay</p>
+                     </div>
+                  </div>
+                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
+               </button>
+               <!-- Net Banking -->
+               <button onclick="processPayment('Net Banking')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
+                  <div class="flex items-center gap-5">
+                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">🏦</div>
+                     <div class="text-left">
+                        <h3 class="text-xl font-bold text-slate-800">Net Banking</h3>
+                        <p class="text-sm text-slate-500 font-medium mt-1">All major Indian banks</p>
+                     </div>
+                  </div>
+                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
+               </button>
+            </div>
+        </div>
+
+        <div id="payment-processing-view" class="hidden w-full flex-1 flex-col items-center justify-center">
+            <div class="w-20 h-20 border-8 border-slate-200 border-t-[#6d6ca2] rounded-full animate-spin mb-8"></div>
+            <h2 class="text-3xl font-bold text-slate-800 mb-3">Processing Payment...</h2>
+            <p class="text-slate-500 text-lg font-medium">Please do not refresh or press back.</p>
+        </div>
+      </div>
+
+      <!-- SCREEN 19: Universal Confirmation -->
+      <div id="screen-19" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade items-center justify-center text-center">
+        <div class="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-8 notranslate">
+            <span class="text-5xl">✓</span>
+        </div>
+        <h1 id="confirm-title" class="text-4xl font-extrabold text-slate-900 mb-4">Request Completed</h1>
+        <p id="confirm-subtitle" class="text-xl font-medium text-slate-600 mb-12">Service Request Number: XXXX</p>
+        
+        <div class="flex gap-4 w-full max-w-md mx-auto">
+          <button onclick="goHome()" class="flex-1 py-4 bg-white border border-slate-300 text-slate-700 text-lg font-bold rounded-xl active:bg-slate-50 transition-colors shadow-sm">
+            Print Receipt
+          </button>
+          <button onclick="goHome()" class="flex-1 py-4 bg-slate-800 text-white text-lg font-bold rounded-xl active:bg-slate-900 transition-colors shadow-sm">
+            Go Home
+          </button>
+        </div>
+      </div>
+
+      <!-- SCREEN 15 (Check Status Timeline) -->
+      <div id="screen-15" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center">
+        <div class="mb-8 mt-4 text-center">
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Status</h1>
+          <p class="text-lg font-medium text-slate-600 font-mono notranslate">SRN: 8472938475</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 flex-1 max-w-xl w-full flex justify-center text-left">
+          <!-- Timeline -->
+          <div class="relative border-l-2 border-slate-200 ml-4 flex flex-col gap-10">
+            <div class="relative pl-8">
+              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-emerald-600 border-4 border-white shadow-sm"></div>
+              <h3 class="text-xl font-bold text-slate-900">Request Submitted</h3>
+              <p class="text-base font-medium text-slate-500 mt-1 notranslate">12 Oct 2023</p>
+            </div>
+            <div class="relative pl-8">
+              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-emerald-600 border-4 border-white shadow-sm"></div>
+              <h3 class="text-xl font-bold text-slate-900">Payment Successful</h3>
+              <p class="text-base font-medium text-slate-500 mt-1 notranslate">12 Oct 2023</p>
+            </div>
+            <div class="relative pl-8">
+              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-amber-500 border-4 border-white shadow-sm"></div>
+              <h3 class="text-xl font-bold text-slate-900">Under Review</h3>
+              <p class="text-base font-medium text-slate-500 mt-1">Processing documents...</p>
+            </div>
+            <div class="relative pl-8 opacity-40">
+              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-slate-300 border-4 border-white shadow-sm"></div>
+              <h3 class="text-xl font-bold text-slate-900">Update Completed</h3>
+              <p class="text-base font-medium text-slate-500 mt-1">Pending</p>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="goHome()" class="btn-primary bg-[#6d6ca2] text-white mb-4 w-full">Done</button>
+      </div>
+
+      <!-- SCREEN 20: Session End -->
+      <div id="screen-20" class="screen hidden absolute inset-0 flex flex-col p-10 bg-slate-900 text-white screen-fade items-center justify-center text-center">
+        <h1 class="text-5xl font-extrabold mb-6">Thank You</h1>
+        <p class="text-xl font-medium text-slate-400 mb-12 max-w-xl leading-relaxed">
+          Your session has safely ended.<br/><br/>
+          All personal information has been securely cleared from this kiosk to protect your privacy.
+        </p>
+        
+        <p class="text-lg font-medium text-slate-500 mb-10">Returning to home in <span id="countdown" class="font-bold text-white text-2xl mx-1 notranslate">10</span> seconds</p>
+        
+        <button onclick="navigateTo('screen-01')" class="btn-primary m-0 border border-slate-700 bg-slate-800 hover:bg-slate-700 shadow-none text-white">
+          Finish Now
+        </button>
+      </div>
+
+    </main>
+
+    <!-- Bottom Nav -->
+    <footer id="bottom-nav" class="flex-none flex items-center justify-between px-10 py-5 bg-white border-t border-slate-200 hidden z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
+      <div class="flex gap-4">
+        <button onclick="goBack()" class="px-8 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-lg hover:bg-slate-200 transition-colors">Back</button>
+        <button onclick="goHome()" class="px-8 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-lg hover:bg-slate-200 transition-colors">Home</button>
+      </div>
+      <div class="flex items-center gap-8">
+        <div class="text-center">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Session</p>
+          <p id="session-timer-display" class="text-xl font-bold text-slate-700 font-mono leading-none mt-1 notranslate">02:00</p>
+        </div>
+        <button onclick="cancelSession()" class="px-6 py-3 rounded-xl text-[#6d6ca2] font-bold text-lg hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
+          Cancel Session
+        </button>
+      </div>
+    </footer>
+
+    <!-- Upload Modal Overlay -->
+    <div id="upload-modal" class="hidden absolute inset-0 bg-slate-900/60 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
+      <div class="bg-white rounded-[2rem] p-10 max-w-2xl w-full shadow-2xl border border-slate-200 text-center flex flex-col gap-8 animate-[fadeIn_0.2s_ease-out]">
+          <h2 class="text-3xl font-extrabold text-slate-900">Provide Document</h2>
+          <p class="text-lg text-slate-600 font-medium -mt-4">Choose how you would like to securely provide this document.</p>
+          
+          <div class="flex gap-6">
+              <!-- Scan Option -->
+              <button onclick="simulateUpload('Scanner')" class="flex-1 bg-white border-2 border-slate-200 rounded-2xl p-8 hover:bg-slate-50 hover:border-slate-400 transition-all group flex flex-col items-center gap-4">
+                  <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl group-hover:bg-slate-200 transition-colors notranslate">🖨️</div>
+                  <span class="text-xl font-bold text-slate-800">Scan Physical Copy</span>
+                  <span class="text-sm text-slate-500 font-medium">Place on kiosk scanner bed</span>
+              </button>
+              
+              <!-- DigiLocker Option -->
+              <button onclick="simulateUpload('DigiLocker')" class="flex-1 bg-white border-2 border-slate-200 rounded-2xl p-8 hover:bg-sky-50 hover:border-sky-600 transition-all group flex flex-col items-center gap-4">
+                  <div class="w-20 h-20 bg-sky-50 rounded-full flex items-center justify-center text-4xl group-hover:bg-sky-100 transition-colors notranslate">☁️</div>
+                  <span class="text-xl font-bold text-slate-800">Fetch from DigiLocker</span>
+                  <span class="text-sm text-slate-500 font-medium">Secure cloud import</span>
+              </button>
+          </div>
+          
+          <button onclick="closeUploadModal()" class="mt-2 text-slate-500 font-bold text-lg hover:text-slate-800 transition-colors">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Timeout Modal Overlay -->
+    <div id="timeout-modal" class="hidden absolute inset-0 bg-slate-900/80 z-[100] flex items-center justify-center backdrop-blur-sm transition-opacity">
+      <div class="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl border border-slate-200 text-center flex flex-col gap-6 animate-[fadeIn_0.2s_ease-out]">
+          <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-4xl mx-auto notranslate">⏳</div>
+          <h2 class="text-3xl font-extrabold text-slate-900">Are you still there?</h2>
+          <p class="text-lg text-slate-600 font-medium">Your session will expire in <span id="warning-countdown" class="font-bold text-[#6d6ca2] text-2xl notranslate">10</span> seconds to protect your privacy.</p>
+          <button onclick="extendSession(event)" class="btn-primary bg-[#6d6ca2] text-white mt-4 w-full">OK, Continue</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Google Translate Widget Script -->
+<script type="text/javascript">
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,hi,mr,gu,bn,ta',
+        autoDisplay: false
+    }, 'google_translate_element');
+  }
+</script>
+<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<script>
+  let currentScreen = 'screen-01';
+  const screenStack = [];
+  let authNextScreen = 'screen-03';
+  let selectedAction = null;
+  let selectedLanguageCode = 'en';
+  let currentUpdateMode = 'name';
+  let selectedGender = '';
+  let activeUploadButton = null;
+
+  // Authentication State Variables
+  let authStep = 1;      // 1: Aadhaar (4 digits), 2: Phone (10 digits), 3: OTP (4 digits)
+  let authInput = '';    // Current value being typed
+  let authPhone = '';    // Stored phone number for display in Step 3
+  
+  let currentTotalSteps = 4; // Tracks dynamic progress bar length
+
+  // Explicitly list classes for selection so the Tailwind CDN doesn't purge them or fail on pseudo-classes
+  const activeCardClasses = ['bg-indigo-50', 'border-[#6d6ca2]', 'ring-2', 'ring-[#6d6ca2]'];
+  const inactiveCardClasses = ['bg-white', 'border-slate-200'];
+  
+  function updateProgressBar(screenId) {
+    const pb = document.getElementById('top-progress');
+    if (!pb) return;
+    
+    let percent = 0;
+    let showBar = true;
+
+    if (['screen-03', 'screen-04', 'screen-05', 'screen-06'].includes(screenId)) {
+        percent = 0;
+    }
+    else if (screenId === 'screen-13' || screenId === 'screen-11') {
+        percent = 25;
+    }
+    else if (screenId === 'screen-07') {
+        percent = 35;
+    }
+    else if (['screen-12-input', 'screen-13-input', 'screen-10', 'screen-14', 'screen-08', 'screen-16', 'screen-17', 'screen-18'].includes(screenId)) {
+        percent = 60;
+    }
+    else if (['screen-12-verify', 'screen-13-verify'].includes(screenId)) {
+        percent = 80;
+    }
+    else if (screenId === 'screen-21') {
+        percent = 90;
+    }
+    else if (['screen-19', 'screen-09', 'screen-15'].includes(screenId)) {
+        percent = 100;
+    }
+    else {
+        showBar = false;
+    }
+
+    if (showBar) {
+        pb.classList.remove('hidden');
+        document.getElementById('progress-fill').style.width = `${percent}%`;
+    } else {
+        pb.classList.add('hidden');
+    }
+  }
+
+  function navigateTo(screenId) {
+    if (screenId !== currentScreen && screenId !== 'screen-20') {
+      screenStack.push(currentScreen);
+    }
+    document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+    document.getElementById(screenId).classList.remove('hidden');
+    currentScreen = screenId;
+    updateNav(screenId);
+    
+    // Setup Auth Screen if triggered
+    if (screenId === 'screen-07') {
+      resetAuth();
+    }
+    
+    // Copy input details to verification screens
+    if (screenId === 'screen-12-verify') {
+      const co = document.getElementById('addr-co').value.trim();
+      const house = document.getElementById('addr-house').value.trim();
+      const street = document.getElementById('addr-street').value.trim();
+      const area = document.getElementById('addr-area').value.trim();
+      const city = document.getElementById('addr-city').value.trim();
+      const state = document.getElementById('addr-state').value.trim();
+      const pincode = document.getElementById('addr-pincode').value.trim();
+      
+      const fullAddress = [co, house, street, area, city, state, pincode].filter(Boolean).join(', ');
+      document.getElementById('verify-address-text').innerText = fullAddress || '(No details provided)';
+    }
+    
+    if (screenId === 'screen-13-verify') {
+      let val = '';
+      if (currentUpdateMode === 'name') val = document.getElementById('input-name').value.trim();
+      if (currentUpdateMode === 'dob') val = document.getElementById('input-dob').value;
+      if (currentUpdateMode === 'gender') val = selectedGender;
+      
+      document.getElementById('verify-info-text').innerText = val || '(Not Provided)';
+    }
+
+    if (screenId === 'screen-20') {
+      startCountdown();
+    }
+    
+    // Timer logic hook
+    if (screenId === 'screen-01' || screenId === 'screen-20') {
+      stopSessionTimer();
+    } else if (!sessionTimerInterval) {
+      resetSessionTimer();
+    }
+    
+    // Refresh floating progress bar based on new screen
+    updateProgressBar(screenId);
+  }
+
+  function goBack() {
+    if (screenStack.length > 0) {
+      const prev = screenStack.pop();
+      document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+      document.getElementById(prev).classList.remove('hidden');
+      currentScreen = prev;
+      updateNav(currentScreen);
+      updateProgressBar(currentScreen);
+    } else {
+      goHome();
+    }
+  }
+
+  function goHome() {
+    screenStack.length = 0;
+    navigateTo('screen-03');
+  }
+
+  function cancelSession() {
+    screenStack.length = 0;
+    navigateTo('screen-20');
+  }
+
+  function updateNav(screenId) {
+    const bottomNav = document.getElementById('bottom-nav');
+    const screen = document.getElementById(screenId);
+    
+    if (['screen-01', 'screen-20'].includes(screenId)) {
+      bottomNav.classList.add('hidden');
+    } else {
+      bottomNav.classList.remove('hidden');
+    }
+
+    // Reset screen selection state upon entry
+    selectedAction = null;
+    if(screen) {
+      screen.querySelectorAll('.menu-card').forEach(el => {
+        el.classList.remove(...activeCardClasses);
+        el.classList.add(...inactiveCardClasses);
+      });
+      const continueBtn = screen.querySelector('.continue-btn');
+      if (continueBtn) {
+        continueBtn.disabled = true;
+        continueBtn.classList.remove('bg-[#6d6ca2]', 'text-white', 'shadow-md');
+        continueBtn.classList.add('bg-slate-300', 'text-slate-500');
+      }
+    }
+  }
+
+  function selectCard(btn, action) {
+    // Deselect siblings explicitly
+    const container = btn.parentElement;
+    container.querySelectorAll('.menu-card').forEach(el => {
+      el.classList.remove(...activeCardClasses);
+      el.classList.add(...inactiveCardClasses);
+    });
+    
+    // Select this card explicitly
+    btn.classList.remove(...inactiveCardClasses);
+    btn.classList.add(...activeCardClasses);
+    selectedAction = action;
+
+    // Enable continue button within the same screen
+    const screen = btn.closest('.screen');
+    const continueBtn = screen.querySelector('.continue-btn');
+    if (continueBtn) {
+      continueBtn.disabled = false;
+      continueBtn.classList.remove('bg-slate-300', 'text-slate-500');
+      continueBtn.classList.add('bg-[#6d6ca2]', 'text-white', 'shadow-md');
+    }
+  }
+
+  function selectLanguageCard(btn, langCode) {
+    selectCard(btn, 'screen-03');
+    selectedLanguageCode = langCode;
+  }
+
+  function triggerGoogleTranslate(langCode) {
+    // Set the language selection programmatically in the google translate widget
+    const translateDropdown = document.querySelector(".goog-te-combo");
+    if (translateDropdown) {
+        translateDropdown.value = langCode;
+        translateDropdown.dispatchEvent(new Event('change'));
+    }
+  }
+
+  function executeSelection() {
+    if (!selectedAction) return;
+    
+    if (currentScreen === 'screen-02' && selectedLanguageCode) {
+        triggerGoogleTranslate(selectedLanguageCode);
+    }
+    
+    if (selectedAction.startsWith('screen-')) {
+      navigateTo(selectedAction);
+    } else if (selectedAction.startsWith('auth:')) {
+      requireAuth(selectedAction.split(':')[1]);
+    } else if (selectedAction.startsWith('func:')) {
+      const func = selectedAction.split(':')[1];
+      window[func]();
+    }
+  }
+
+  function setUpdateMode(mode) {
+    currentUpdateMode = mode;
+    document.getElementById('dynamic-form-name').classList.add('hidden');
+    document.getElementById('dynamic-form-dob').classList.add('hidden');
+    document.getElementById('dynamic-form-gender').classList.add('hidden');
+    document.getElementById('dynamic-form-' + mode).classList.remove('hidden');
+    
+    // Reset gender selection
+    selectedGender = '';
+    const btnContinue = document.getElementById('btn-demo-continue');
+    btnContinue.disabled = (mode === 'gender');
+  }
+
+  function selectGender(btn, gender) {
+    selectCard(btn, 'gender');
+    selectedGender = gender;
+    document.getElementById('btn-demo-continue').disabled = false;
+  }
+
+  // --- Document Selection Logic ---
+  function checkDocSelection(selectId, btnId) {
+    const selectEl = document.getElementById(selectId);
+    const btnEl = document.getElementById(btnId);
+    if (selectEl && btnEl) {
+      btnEl.disabled = (selectEl.value === "");
+    }
+  }
+
+  // --- 3-Step Authentication Logic ---
+
+  function requireAuth(nextScreen) {
+    authNextScreen = nextScreen;
+    navigateTo('screen-07');
+  }
+
+  function resetAuth() {
+    authStep = 1;
+    authInput = '';
+    authPhone = '';
+    updateAuthUI();
+  }
+
+  function typePin(key) {
+    const maxLen = (authStep === 2) ? 10 : 4;
+    
+    if (key === 'clear') {
+      authInput = '';
+    } else if (key === 'del') {
+      authInput = authInput.slice(0, -1);
+    } else if (authInput.length < maxLen) {
+      authInput += key;
+    }
+    updateAuthUI();
+  }
+
+  function updateAuthUI() {
+    const title = document.getElementById('auth-title');
+    const subtitle = document.getElementById('auth-subtitle');
+    const container = document.getElementById('auth-input-container');
+    const authBtn = document.getElementById('auth-btn');
+
+    // Update Text and Display Formats based on current step
+    if (authStep === 1) {
+      title.innerText = "Verify your identity";
+      subtitle.innerText = "Enter the last 4 digits of your Aadhaar Number.";
+      container.innerHTML = `
+        <div class="text-3xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">XXXX</div>
+        <div class="text-3xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">XXXX</div>
+        <div class="text-4xl font-bold text-[#6d6ca2] tracking-widest px-6 min-w-[150px] text-center">${authInput.padEnd(4, '_')}</div>
+      `;
+    } else if (authStep === 2) {
+      title.innerText = "Enter Mobile Number";
+      subtitle.innerText = "Enter your 10-digit registered mobile number.";
+      container.innerHTML = `
+        <div class="text-4xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">+91</div>
+        <div class="text-4xl font-bold text-[#6d6ca2] tracking-widest px-6 min-w-[280px] text-center">${authInput.padEnd(10, '_')}</div>
+      `;
+    } else if (authStep === 3) {
+      title.innerText = "Enter OTP";
+      subtitle.innerText = "Enter the 4-digit OTP sent to +91 " + authPhone + ".";
+      const otpDisplay = authInput.padEnd(4, '_').split('').join(' ');
+      container.innerHTML = `
+        <div class="text-5xl font-bold text-[#6d6ca2] tracking-widest px-8 min-w-[200px] text-center">${otpDisplay}</div>
+      `;
+    }
+
+    // Validation for continue button
+    let isValid = false;
+    if (authStep === 1 && authInput.length === 4) isValid = true;
+    if (authStep === 2 && authInput.length === 10) isValid = true;
+    if (authStep === 3 && authInput.length === 4) isValid = true;
+
+    if (isValid) {
+      authBtn.disabled = false;
+      authBtn.classList.remove('bg-slate-300', 'text-slate-500');
+      authBtn.classList.add('bg-[#6d6ca2]', 'text-white', 'shadow-md');
+    } else {
+      authBtn.disabled = true;
+      authBtn.classList.add('bg-slate-300', 'text-slate-500');
+      authBtn.classList.remove('bg-[#6d6ca2]', 'text-white', 'shadow-md');
+    }
+  }
+
+  function submitAuth() {
+    if (authStep === 1 && authInput.length === 4) {
+      authStep = 2;
+      authInput = '';
+      updateAuthUI();
+    } else if (authStep === 2 && authInput.length === 10) {
+      authPhone = authInput;
+      authStep = 3;
+      authInput = '';
+      updateAuthUI();
+    } else if (authStep === 3 && authInput.length === 4) {
+      // Finished all 3 steps successfully!
+      navigateTo(authNextScreen);
+    }
+  }
+
+  // --- End 3-Step Authentication Logic ---
+
+  let pendingTitle = '';
+  let pendingSubtitle = '';
+
+  function confirmAction(title, subtitle, requiresPayment = false) {
+    pendingTitle = title;
+    pendingSubtitle = subtitle;
+    
+    if (requiresPayment) {
+        navigateTo('screen-21');
+    } else {
+        document.getElementById('confirm-title').innerText = title;
+        document.getElementById('confirm-subtitle').innerText = subtitle;
+        navigateTo('screen-19');
+    }
+  }
+
+  function processPayment(method) {
+    document.getElementById('payment-selection-view').classList.add('hidden');
+    document.getElementById('payment-processing-view').classList.remove('hidden');
+    document.getElementById('payment-processing-view').classList.add('flex');
+    
+    // Simulate API processing delay
+    setTimeout(() => {
+        document.getElementById('confirm-title').innerText = pendingTitle;
+        document.getElementById('confirm-subtitle').innerText = pendingSubtitle;
+        navigateTo('screen-19');
+        
+        // Restore for future visits seamlessly in the background
+        setTimeout(() => {
+            document.getElementById('payment-processing-view').classList.add('hidden');
+            document.getElementById('payment-processing-view').classList.remove('flex');
+            document.getElementById('payment-selection-view').classList.remove('hidden');
+        }, 1000);
+    }, 2000);
+  }
+
+  function showStatusTimeline() {
+    navigateTo('screen-15');
+  }
+
+  function generateVID() {
+    document.getElementById('vid-result').classList.remove('hidden');
+    document.getElementById('vid-gen-btn').classList.add('hidden');
+    document.getElementById('vid-finish-btn').classList.remove('hidden');
+  }
+
+  // --- Upload Modal Logic ---
+  
+  function openUploadModal(btnElement) {
+    activeUploadButton = btnElement;
+    document.getElementById('upload-modal').classList.remove('hidden');
+  }
+
+  function closeUploadModal() {
+    document.getElementById('upload-modal').classList.add('hidden');
+    activeUploadButton = null;
+  }
+
+  function simulateUpload(method) {
+    if (activeUploadButton) {
+      // Visually update the original button to show success
+      activeUploadButton.innerHTML = `
+          <div class="flex items-center justify-center gap-3">
+              <span class="text-3xl notranslate">✓</span>
+              <span class="text-lg font-bold">Attached via ${method}</span>
+          </div>
+      `;
+      // Swap out the dashed grey border styles for solid emerald success styles
+      activeUploadButton.classList.remove('border-dashed', 'border-slate-300', 'text-slate-500', 'hover:bg-slate-100', 'hover:bg-slate-50');
+      activeUploadButton.classList.add('border-solid', 'border-emerald-500', 'bg-emerald-50', 'text-emerald-700');
+    }
+    closeUploadModal();
+  }
+
+  let countdownTimer;
+  function startCountdown() {
+    let count = 10;
+    document.getElementById('countdown').innerText = count;
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      count--;
+      document.getElementById('countdown').innerText = count;
+      if (count <= 0) {
+        clearInterval(countdownTimer);
+        navigateTo('screen-01');
+      }
+    }, 1000);
+  }
+
+  // --- Attract Screen Language Rotation ---
+  const attractTexts = [
+    "TAP TO BEGIN",
+    "शुरू करने के लिए टैप करें",
+    "सुरू करण्यासाठी टॅप करा",
+    "શરૂ કરવા માટે ટેપ કરો",
+    "শুরু করতে আলতো চাপুন",
+    "தொடங்க தட்டவும்"
+  ];
+  let currentAttractIdx = 0;
+
+  setInterval(() => {
+    if (currentScreen === 'screen-01') {
+      const btnText = document.getElementById('tap-to-begin-text');
+      if (btnText) {
+        btnText.style.opacity = '0';
+        setTimeout(() => {
+          currentAttractIdx = (currentAttractIdx + 1) % attractTexts.length;
+          btnText.innerText = attractTexts[currentAttractIdx];
+          btnText.style.opacity = '1';
+        }, 500); // Wait for fade out
+      }
+    }
+  }, 3000);
+
+  // --- Session Timer Logic ---
+  let sessionTimerInterval = null;
+  let warningCountdownInterval = null;
+  let sessionTimeLeft = 120; // 2 minutes
+  let warningTimeLeft = 10;
+  let isWarningActive = false;
+
+  function updateSessionDisplay() {
+    const display = document.getElementById('session-timer-display');
+    if (display) {
+      const m = Math.floor(sessionTimeLeft / 60).toString().padStart(2, '0');
+      const s = (sessionTimeLeft % 60).toString().padStart(2, '0');
+      display.innerText = `${m}:${s}`;
+    }
+  }
+
+  function resetSessionTimer() {
+    if (currentScreen === 'screen-01' || currentScreen === 'screen-20') return;
+    if (isWarningActive) return;
+
+    clearInterval(sessionTimerInterval);
+    sessionTimeLeft = 120;
+    updateSessionDisplay();
+
+    sessionTimerInterval = setInterval(() => {
+      sessionTimeLeft--;
+      updateSessionDisplay();
+      
+      if (sessionTimeLeft <= 0) {
+        showTimeoutWarning();
+      }
+    }, 1000);
+  }
+
+  function stopSessionTimer() {
+    clearInterval(sessionTimerInterval);
+    clearInterval(warningCountdownInterval);
+    sessionTimerInterval = null;
+    isWarningActive = false;
+    const modal = document.getElementById('timeout-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function showTimeoutWarning() {
+    clearInterval(sessionTimerInterval);
+    isWarningActive = true;
+    warningTimeLeft = 10;
+    document.getElementById('warning-countdown').innerText = warningTimeLeft;
+    document.getElementById('timeout-modal').classList.remove('hidden');
+
+    warningCountdownInterval = setInterval(() => {
+      warningTimeLeft--;
+      document.getElementById('warning-countdown').innerText = warningTimeLeft;
+      if (warningTimeLeft <= 0) {
+        stopSessionTimer();
+        cancelSession();
+      }
+    }, 1000);
+  }
+
+  function extendSession(e) {
+    if (e) e.stopPropagation();
+    stopSessionTimer();
+    resetSessionTimer();
+  }
+
+  // Reset timer on any screen interaction
+  document.addEventListener('click', resetSessionTimer);
+  document.addEventListener('touchstart', resetSessionTimer);
+
+</script>
+</body>
+</html>
+
+
+

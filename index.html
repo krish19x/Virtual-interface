@@ -3,1350 +3,2054 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UIDAI Kiosk Prototype (11x8 Landscape)</title>
+  <title>Aadhaar Seva Kendra - Multi-Pod ATM Vestibule</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <style type="text/tailwindcss">
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    body { font-family: 'Inter', sans-serif; top: 0 !important; position: static !important; }
-    
-    /* Hide Google Translate UI elements to keep kiosk clean */
-    .skiptranslate { display: none !important; }
-    #goog-gt-tt, .goog-te-banner-frame { display: none !important; }
-    .goog-tooltip { display: none !important; }
-    .goog-tooltip:hover { display: none !important; }
-    .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
-    
-    .screen-fade { animation: fadeIn 0.2s ease-out forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .pattern-bg { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 32px 32px; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    
-    .menu-card { 
-      @apply text-center p-6 rounded-2xl flex flex-col items-center justify-center gap-4 transition-all shadow-sm cursor-pointer hover:shadow-md; 
-    }
-    .menu-card h2 { @apply text-2xl font-bold text-slate-800 leading-snug; }
-    
-    .input-field { 
-      @apply w-full p-4 text-xl font-medium border border-slate-300 rounded-xl focus:outline-none focus:border-[#6d6ca2] focus:ring-1 focus:ring-[#6d6ca2] bg-white transition-all text-slate-800 placeholder-slate-400; 
-    }
-    select.input-field { @apply appearance-none bg-white cursor-pointer; }
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Three.js, Controls & Tween -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+  <script src="kiosk_obj_data.js"></script>
 
-    .btn-primary { 
-      @apply w-full max-w-sm mx-auto py-4 text-xl font-bold rounded-xl active:scale-[0.98] transition-all shadow-md disabled:shadow-none disabled:active:scale-100; 
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #0b0f17;
+      margin: 0;
+      padding: 0;
     }
-    .btn-secondary {
-      @apply w-full max-w-sm mx-auto py-4 bg-white text-slate-700 border border-slate-300 text-xl font-bold rounded-xl active:bg-slate-50 transition-all shadow-sm;
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
     }
-
-    @keyframes attractPulse {
-      0%, 100% { transform: scale(1); box-shadow: 0 10px 25px -5px rgba(109, 108, 162, 0.4); }
-      50% { transform: scale(1.05); box-shadow: 0 25px 50px -12px rgba(109, 108, 162, 0.6); }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
-    .attract-anim { animation: attractPulse 2s infinite ease-in-out; }
+    #VRButton {
+      position: absolute !important;
+      bottom: 24px !important;
+      right: 24px !important;
+      background: linear-gradient(135deg, #c2410c, #b91c1c) !important;
+      color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.25) !important;
+      border-radius: 14px !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.05em !important;
+      padding: 10px 20px !important;
+      box-shadow: 0 10px 25px -5px rgba(185, 28, 28, 0.5) !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      z-index: 50 !important;
+      outline: none;
+    }
+    #VRButton:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px -4px rgba(185, 28, 28, 0.65) !important;
+    }
+    .crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.7);
+      border: 2px solid rgba(0, 0, 0, 0.7);
+      transition: opacity 0.2s;
+    }
+    .key-indicator {
+      transition: all 0.1s ease;
+    }
+    .key-indicator.active {
+      background-color: #10b981 !important;
+      color: #ffffff !important;
+      transform: scale(0.94);
+    }
   </style>
 </head>
-<body class="bg-slate-900 flex items-center justify-center min-h-screen p-4 sm:p-8">
+<body class="relative w-screen h-screen overflow-hidden text-slate-100">
 
-<!-- Hidden Google Translate Element -->
-<div id="google_translate_element" class="hidden"></div>
+  <!-- 3D Canvas Container -->
+  <div id="canvas-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"></div>
 
-<div class="hidden bg-indigo-50 border-[#6d6ca2] ring-2 ring-[#6d6ca2] bg-white border-slate-200 bg-[#6d6ca2] text-white bg-slate-300 text-slate-500 border-solid border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-sky-50 hover:border-sky-600 bg-sky-50 bg-sky-100"></div>
+  <!-- Walk Mode Crosshair -->
+  <div id="crosshair" class="crosshair"></div>
 
-<!-- Kiosk Bezel (11x8 aspect ratio) -->
-<div class="relative w-full max-w-[1100px] aspect-[11/8] bg-black rounded-[3rem] p-4 shadow-2xl flex-shrink-0">
-  
-  <!-- Screen container -->
-  <div class="relative w-full h-full bg-[#f5eae7] rounded-[2.25rem] overflow-hidden flex flex-col border border-slate-800">
-    
-    <!-- Top Progress Bar -->
-    <header id="top-progress" class="hidden flex-none bg-white border-b border-slate-200 px-10 py-4 z-20 shadow-sm transition-all duration-300 notranslate">
-       <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-          <div id="progress-fill" class="h-full bg-emerald-500 transition-all duration-700 ease-out" style="width: 25%;"></div>
-       </div>
-    </header>
+  <!-- Top Navigation & Branding Header -->
+  <header class="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none z-30">
+    <div class="flex items-center space-x-3 pointer-events-auto">
+      <div class="h-11 w-11 rounded-xl bg-gradient-to-tr from-amber-600 to-red-600 flex items-center justify-center shadow-lg shadow-red-900/40 border border-white/20">
+        <i class="fa-solid fa-fingerprint text-xl text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs uppercase tracking-widest font-bold text-amber-400">UIDAI Architecture Lab</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> 4 PODS ONLINE
+          </span>
+        </div>
+        <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          Aadhaar 24/7 ATM &amp; CSC Vestibule
+        </h1>
+      </div>
+    </div>
 
-    <!-- Content Area -->
-    <main class="flex-1 relative overflow-y-auto no-scrollbar bg-[#f5eae7]">
-      
-      <!-- SCREEN 01: Idle -->
-      <div id="screen-01" class="screen absolute inset-0 flex flex-col items-center justify-center pattern-bg bg-[#f5eae7] p-8 screen-fade text-center">
-        <div class="w-32 h-32 bg-[#6d6ca2] rounded-full flex items-center justify-center text-white font-bold text-6xl shadow-lg mb-10 notranslate attract-anim">A</div>
-        <h1 class="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Your Aadhaar Services,<br/>Made Simple</h1>
-        <p class="text-xl text-slate-500 font-medium mb-16">Access and manage your Aadhaar securely.</p>
-        <button onclick="navigateTo('screen-doc-select')" class="btn-primary bg-[#6d6ca2] text-white max-w-xs shadow-lg text-2xl py-5 attract-anim">
-          <span id="tap-to-begin-text" class="transition-opacity duration-500 notranslate block">TAP TO BEGIN</span>
+    <!-- Mode and Camera Bar -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <!-- Walk Mode Toggle -->
+      <button id="btn-toggle-walk" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/30">
+        <i class="fa-solid fa-person-walking text-sm"></i>
+        <span id="walk-mode-text">Walk Inside (Active)</span>
+      </button>
+
+      <!-- Camera Presets -->
+      <div class="hidden md:flex items-center bg-slate-900/80 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-lg">
+        <button data-cam="entrance" class="cam-preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors">
+          <i class="fa-solid fa-door-open mr-1.5 text-amber-400"></i>Street Door
+        </button>
+        <button data-cam="overview" class="cam-preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-800 transition-colors">
+          <i class="fa-solid fa-layer-group mr-1.5 text-blue-400"></i>Vestibule
+        </button>
+        <button data-cam="pod1" class="cam-preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors">
+          <i class="fa-solid fa-display mr-1.5 text-emerald-400"></i>Pod 01
+        </button>
+        <button data-cam="top" class="cam-preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors">
+          <i class="fa-solid fa-cubes mr-1.5 text-purple-400"></i>Plan View
         </button>
       </div>
 
-      <!-- SCREEN DOC SELECT: Choose Service (4 grid options) -->
-      <div id="screen-doc-select" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center">
-        <div class="mb-12 text-center">
-          <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Select a Document Service</h1>
-          <p class="text-xl font-medium text-slate-600">Which document would you like to access today?</p>
-        </div>
+      <!-- Door Manual Override -->
+      <button id="btn-door-toggle" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-white/10 flex items-center gap-1.5 transition-all shadow-md">
+        <i class="fa-solid fa-sliders text-amber-400"></i>
+        <span id="door-btn-text">Door: Auto Sensor</span>
+      </button>
 
-        <div class="grid grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
-          <!-- Aadhaar (Active) -->
-          <button onclick="navigateTo('screen-02')" class="menu-card bg-white border border-slate-200 py-12 hover:border-[#6d6ca2] hover:shadow-lg transition-all group">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 group-hover:bg-indigo-50 transition-colors notranslate">🆔</div>
-            <h2 class="text-3xl font-bold text-slate-800">Aadhaar</h2>
-          </button>
-          
-          <!-- PAN Card (Inactive) -->
-          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">💳</div>
-            <h2 class="text-3xl text-slate-500 font-bold">PAN Card</h2>
-            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
-          </div>
+      <!-- Light Toggle -->
+      <button id="btn-light-toggle" class="w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-white/10 flex items-center justify-center transition-all shadow-md" title="Toggle Lighting">
+        <i class="fa-solid fa-moon text-sm"></i>
+      </button>
+    </div>
+  </header>
 
-          <!-- Passport (Inactive) -->
-          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">🛂</div>
-            <h2 class="text-3xl text-slate-500 font-bold">Passport</h2>
-            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
-          </div>
-
-          <!-- Ayushman (Inactive) -->
-          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">🏥</div>
-            <h2 class="text-3xl text-slate-500 font-bold">Ayushman</h2>
-            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
-          </div>
+  <!-- Walk Mode HUD / Key Press Indicator (Bottom Left) -->
+  <div id="walk-hud" class="absolute bottom-6 left-6 z-20 pointer-events-none flex flex-col gap-2 transition-opacity duration-300">
+    <div class="glass-card px-4 py-3 rounded-2xl pointer-events-auto flex items-center gap-4 shadow-2xl border border-white/15">
+      <div class="flex flex-col items-center">
+        <div id="key-w" class="key-indicator w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold flex items-center justify-center text-slate-300 mb-1">W</div>
+        <div class="flex gap-1">
+          <div id="key-a" class="key-indicator w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold flex items-center justify-center text-slate-300">A</div>
+          <div id="key-s" class="key-indicator w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold flex items-center justify-center text-slate-300">S</div>
+          <div id="key-d" class="key-indicator w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold flex items-center justify-center text-slate-300">D</div>
         </div>
       </div>
-
-      <!-- SCREEN 02: Language Selection (notranslate to preserve language names) -->
-      <div id="screen-02" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center notranslate">
-        <div class="mb-10 mt-6 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900">Choose your preferred language</h1>
-        </div>
-        <div class="grid grid-cols-3 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectLanguageCard(this, 'en')" class="menu-card bg-white border border-slate-200 py-10"><h2>English</h2></button>
-          <button onclick="selectLanguageCard(this, 'hi')" class="menu-card bg-white border border-slate-200 py-10"><h2>हिंदी</h2></button>
-          <button onclick="selectLanguageCard(this, 'mr')" class="menu-card bg-white border border-slate-200 py-10"><h2>मराठी</h2></button>
-          <button onclick="selectLanguageCard(this, 'gu')" class="menu-card bg-white border border-slate-200 py-10"><h2>ગુજરાતી</h2></button>
-          <button onclick="selectLanguageCard(this, 'bn')" class="menu-card bg-white border border-slate-200 py-10"><h2>বাংলা</h2></button>
-          <button onclick="selectLanguageCard(this, 'ta')" class="menu-card bg-white border border-slate-200 py-10"><h2>தமிழ்</h2></button>
-        </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
-        </div>
+      <div class="text-[11px] leading-tight text-slate-300 border-l border-white/10 pl-3">
+        <div class="font-bold text-white mb-0.5"><i class="fa-regular fa-compass mr-1 text-emerald-400"></i>FPS Navigation</div>
+        <div><span class="text-emerald-400 font-semibold">W / S:</span> Forward / Back</div>
+        <div><span class="text-emerald-400 font-semibold">A / D:</span> Strafe Left / Right</div>
+        <div><span class="text-emerald-400 font-semibold">Shift:</span> Sprint | <span class="text-amber-400 font-semibold">Drag:</span> Look</div>
       </div>
+    </div>
+  </div>
 
-      <!-- SCREEN 03: Main Service Menu -->
-      <div id="screen-03" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">My Aadhaar Services</h1>
-          <p class="text-lg text-slate-600 font-medium">What would you like to do today?</p>
-        </div>
-        <div class="grid grid-cols-3 gap-8 mb-10 max-w-5xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'screen-04')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2 class="text-3xl">Get Aadhaar</h2>
-          </button>
-          <button onclick="selectCard(this, 'screen-05')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2 class="text-3xl">Update Details</h2>
-          </button>
-          <button onclick="selectCard(this, 'screen-06')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2 class="text-3xl">Status & Security</h2>
-          </button>
-        </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
-        </div>
-      </div>
+  <!-- Mobile Touch On-Screen D-Pad Controls -->
+  <div id="touch-controls" class="md:hidden absolute bottom-6 right-6 z-20 pointer-events-auto flex flex-col items-center gap-1">
+    <button id="touch-up" class="w-12 h-12 rounded-xl bg-slate-800/90 active:bg-emerald-600 border border-white/20 text-white flex items-center justify-center shadow-lg"><i class="fa-solid fa-chevron-up"></i></button>
+    <div class="flex gap-2">
+      <button id="touch-left" class="w-12 h-12 rounded-xl bg-slate-800/90 active:bg-emerald-600 border border-white/20 text-white flex items-center justify-center shadow-lg"><i class="fa-solid fa-chevron-left"></i></button>
+      <button id="touch-down" class="w-12 h-12 rounded-xl bg-slate-800/90 active:bg-emerald-600 border border-white/20 text-white flex items-center justify-center shadow-lg"><i class="fa-solid fa-chevron-down"></i></button>
+      <button id="touch-right" class="w-12 h-12 rounded-xl bg-slate-800/90 active:bg-emerald-600 border border-white/20 text-white flex items-center justify-center shadow-lg"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+  </div>
 
-      <!-- SCREEN 04: Get Aadhaar Menu -->
-      <div id="screen-04" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Get Aadhaar</h1>
-          <p class="text-lg text-slate-600 font-medium">Choose what you would like to do.</p>
-        </div>
-        <div class="grid grid-cols-3 gap-8 mb-10 max-w-5xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'auth:screen-08')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2>Download Aadhaar (PDF)</h2>
-          </button>
-          <button onclick="selectCard(this, 'auth:screen-10')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2>Order Aadhaar PVC Card</h2>
-          </button>
-          <button onclick="selectCard(this, 'screen-11')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2>Check PVC Card Status</h2>
-          </button>
-        </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
-        </div>
-      </div>
+  <!-- Interactive Instruction Notice at Bottom Center -->
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none z-20 hidden sm:flex items-center gap-2 px-4 py-2 rounded-full glass-card border border-white/10 text-xs text-slate-300 shadow-xl">
+    <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+    <span>Walk toward the glass entrance doors to trigger the automatic motion sensor. Click any kiosk screen to cycle services.</span>
+  </div>
 
-      <!-- SCREEN 05: Update Details Menu -->
-      <div id="screen-05" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Aadhaar Details</h1>
-          <p class="text-lg text-slate-600 font-medium">Select the information you wish to update.</p>
-        </div>
-        <div class="grid grid-cols-2 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'auth:screen-12-input')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Address Update</h2>
-          </button>
-          <button onclick="selectCard(this, 'auth:screen-13')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Demographic Data (Name/DOB/Gender)</h2>
-          </button>
-          <button onclick="selectCard(this, 'auth:screen-14')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Document Update (POI/POA)</h2>
-          </button>
-          <button onclick="selectCard(this, 'screen-15')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Check Update Status</h2>
-          </button>
-        </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
-        </div>
-      </div>
-
-      <!-- SCREEN 06: Status & Security Menu -->
-      <div id="screen-06" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Status & Security</h1>
-          <p class="text-lg text-slate-600 font-medium">Manage and protect your Aadhaar.</p>
-        </div>
-        <div class="grid grid-cols-2 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'screen-15')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Check Enrolment & Update Status</h2>
-          </button>
-          <button onclick="selectCard(this, 'auth:screen-16')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Lock / Unlock Aadhaar</h2>
-          </button>
-          <button onclick="selectCard(this, 'auth:screen-17')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Lock / Unlock Biometrics</h2>
-          </button>
-          <button onclick="selectCard(this, 'auth:screen-18')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Virtual ID (VID) Generator</h2>
-          </button>
-        </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
-        </div>
-      </div>
-
-      <!-- SCREEN 07: Authentication (Dynamic 3-Step) -->
-      <div id="screen-07" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-8 mt-2 text-center">
-          <h1 id="auth-title" class="text-3xl font-extrabold text-slate-900 mb-2">Verify your identity</h1>
-          <p id="auth-subtitle" class="text-lg text-slate-600 font-medium">Enter the last 4 digits of your Aadhaar Number.</p>
-        </div>
-        
-        <div id="auth-input-container" class="flex justify-center items-center mb-8 bg-white border-2 border-slate-300 rounded-2xl shadow-inner max-w-lg mx-auto py-6 min-h-[104px] notranslate">
-          <!-- Populated dynamically via JS based on authStep -->
-        </div>
-
-        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center mb-8 max-w-sm mx-auto">
-          <p class="text-sm text-slate-500 font-medium">Data is securely processed and not stored locally.</p>
-        </div>
-
-        <!-- Keypad (Landscape format, compacted) -->
-        <div class="grid grid-cols-5 gap-3 max-w-lg mx-auto w-full mb-4 notranslate">
-          <button onclick="typePin('1')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">1</button>
-          <button onclick="typePin('2')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">2</button>
-          <button onclick="typePin('3')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">3</button>
-          <button onclick="typePin('4')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">4</button>
-          <button onclick="typePin('5')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">5</button>
-          <button onclick="typePin('6')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">6</button>
-          <button onclick="typePin('7')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">7</button>
-          <button onclick="typePin('8')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">8</button>
-          <button onclick="typePin('9')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">9</button>
-          <button onclick="typePin('0')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">0</button>
-          
-          <button onclick="typePin('clear')" class="col-span-1 p-4 text-lg font-bold bg-slate-200 border border-slate-300 rounded-xl active:bg-slate-300 text-slate-700 transition-colors translate">Clear</button>
-          <button onclick="typePin('del')" class="col-span-1 p-4 text-2xl font-bold bg-slate-200 border border-slate-300 rounded-xl active:bg-slate-300 text-slate-700 transition-colors">⌫</button>
-          <button id="auth-btn" disabled onclick="submitAuth()" class="col-span-3 p-4 text-lg font-bold bg-slate-300 text-slate-500 rounded-xl transition-colors translate">Continue</button>
-        </div>
-      </div>
-
-      <!-- SCREEN 08: Get Digital Copy -->
-      <div id="screen-08" class="screen hidden absolute inset-0 flex flex-col items-center justify-center p-10 bg-[#f5eae7] screen-fade text-center">
-        <h1 class="text-4xl font-extrabold text-slate-900 mb-8">Download Aadhaar</h1>
-        <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm mb-10 max-w-lg w-full">
-          <p class="text-xl font-medium text-slate-600 mb-4">Your digital copy will be securely sent to:</p>
-          <h2 class="text-2xl font-bold text-slate-900 mb-2">Registered Mobile (WhatsApp)</h2>
-          <p class="text-3xl font-bold text-slate-800 tracking-wide notranslate">+91 XXXXX 12345</p>
-          <div class="mt-6 flex items-center justify-center gap-3">
-             <input type="checkbox" id="masked-aadhaar" class="w-6 h-6 rounded border-slate-300 text-[#6d6ca2] focus:ring-[#6d6ca2]">
-             <label for="masked-aadhaar" class="text-lg font-medium text-slate-700">Download Masked Aadhaar?</label>
-          </div>
-        </div>
-        <div class="flex gap-4 w-full max-w-lg">
-          <button onclick="goBack()" class="btn-secondary">Cancel</button>
-          <button onclick="navigateTo('screen-09')" class="btn-primary bg-[#6d6ca2] text-white m-0">Send PDF</button>
-        </div>
-      </div>
-
-      <!-- SCREEN 09: Digital Copy Confirmation -->
-      <div id="screen-09" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade items-center justify-center text-center">
-        <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Request Processed</h1>
-        <p class="text-xl font-medium text-slate-600 mb-10 max-w-lg">Your Aadhaar PDF has been successfully generated and delivered to your registered number.</p>
-        
-        <div class="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-center mb-12 max-w-lg">
-          <p class="text-base text-slate-600 font-medium">Ensure your device is secure before opening the document. Password is 8 characters (first 4 letters of name + YYYY).</p>
-        </div>
-
-        <button onclick="goHome()" class="btn-secondary">Return to Services</button>
-      </div>
-
-      <!-- SCREEN 10: Order PVC Card -->
-      <div id="screen-10" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-8 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Order Aadhaar PVC Card</h1>
-          <div class="flex items-center justify-center gap-4 text-base font-semibold text-slate-400">
-             <span class="text-[#6d6ca2]">1. Verify Details</span> <span class="notranslate">-</span> <span>2. Payment (₹50)</span>
-          </div>
-        </div>
-        
-        <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm mb-8 max-w-2xl mx-auto w-full text-left">
-          <h3 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-6">Demographic Preview</h3>
-          <div class="grid grid-cols-2 gap-6 mb-6">
-            <div>
-              <p class="text-sm text-slate-500 uppercase font-bold mb-1">Name</p>
-              <p class="text-xl font-bold text-slate-900 notranslate">Rahul Sharma</p>
-            </div>
-            <div>
-              <p class="text-sm text-slate-500 uppercase font-bold mb-1">Aadhaar Number</p>
-              <p class="text-xl font-bold text-slate-900 tracking-widest notranslate">XXXX XXXX 1234</p>
-            </div>
+  <!-- Kiosk Interactive Modal / VR Screen Viewer -->
+  <div id="kiosk-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-2 sm:p-6">
+    <div class="glass-card w-full max-w-4xl h-[88vh] rounded-3xl p-4 sm:p-6 border border-white/20 shadow-2xl relative flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-white font-bold shadow-md">
+            <i class="fa-solid fa-fingerprint"></i>
           </div>
           <div>
-            <p class="text-sm text-slate-500 uppercase font-bold mb-1">Delivery Address</p>
-            <p class="text-lg font-medium text-slate-700 leading-snug notranslate">Flat 402, Block B, Green Valley Apts,<br/>Andheri East, Mumbai, 400069, Maharashtra</p>
+            <h3 id="modal-title" class="font-bold text-white text-base sm:text-lg">UIDAI Interactive Kiosk Terminal</h3>
+            <p id="modal-pod-id" class="text-xs text-amber-400 font-mono-code">POD STATION 01 • LIVE ACTIVE</p>
           </div>
         </div>
-
-        <button onclick="confirmAction('PVC Card Ordered', 'Order SRN: SRN8472938475. Payment Successful.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
-          Proceed to Payment (₹50)
-        </button>
-      </div>
-
-      <!-- SCREEN 11 / 15: Check Status -->
-      <div id="screen-11" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-8 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Check Request Status</h1>
-          <p class="text-lg font-medium text-slate-600">Enter your Service Request Number (SRN/URN).</p>
-        </div>
-
-        <input type="text" placeholder="Enter SRN / URN" value="SRN8472938475" readonly class="input-field max-w-xl mx-auto text-center notranslate" />
-
-        <div class="flex-1 bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center mb-8 max-w-3xl mx-auto w-full shadow-inner">
-           <span class="text-slate-400 font-bold text-xl">[ Touch Keyboard Area ]</span>
-        </div>
-
-        <button onclick="showStatusTimeline()" class="btn-primary bg-[#6d6ca2] text-white mb-4">Check Status</button>
-      </div>
-
-      <!-- SCREEN 12-INPUT: Address Update Form -->
-      <div id="screen-12-input" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-6 mt-2 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Address</h1>
-          <p class="text-lg font-medium text-slate-600">Fill in the details as per your Proof of Address (POA) document.</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4 max-w-4xl mx-auto w-full flex-1 overflow-y-auto pr-4 mb-4 pb-4">
-           <input type="text" id="addr-co" class="input-field col-span-2" placeholder="Care of (C/o)">
-           <input type="text" id="addr-house" class="input-field" placeholder="House/Bldg/Apt">
-           <input type="text" id="addr-street" class="input-field" placeholder="Street/Road/Lane">
-           <input type="text" id="addr-area" class="input-field" placeholder="Area/Locality/Sector">
-           <input type="text" id="addr-landmark" class="input-field" placeholder="Landmark">
-           <input type="text" id="addr-pincode" class="input-field" placeholder="Pincode">
-           <input type="text" id="addr-city" class="input-field" placeholder="Village/Town/City">
-           <input type="text" id="addr-district" class="input-field" placeholder="District">
-           <input type="text" id="addr-state" class="input-field" placeholder="State">
-           <!-- Document Upload for Address (POA) -->
-           <div class="col-span-2 mt-2">
-               <select id="addr-poa" onchange="checkDocSelection('addr-poa', 'btn-addr-poa')" class="input-field mb-3 text-slate-700 text-lg">
-                 <option value="">Select Valid Supporting Document (POA)</option>
-                 <option>Bank Account / Post Office Passbook or Statement</option>
-                 <option>Voter ID / e-Voter ID</option>
-                 <option>Passport</option>
-                 <option>Ration Card</option>
-                 <option>Driving License</option>
-                 <option>Electricity Bill (not older than 3 months)</option>
-                 <option>Water Bill (not older than 3 months)</option>
-                 <option>Gas Connection Bill (not older than 3 months)</option>
-                 <option>Telephone / Broadband Bill (not older than 3 months)</option>
-                 <option>Registered Lease / Rent / Sale Agreement</option>
-                 <option>Property Tax Receipt (not older than 1 year)</option>
-                 <option>Allotment Letter of Accommodation (Govt)</option>
-               </select>
-               <button id="btn-addr-poa" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-2xl notranslate">📸</span>
-                 <span>Provide POA Document</span>
-              </button>
-           </div>
-        </div>
-
-        <button onclick="navigateTo('screen-12-verify')" class="btn-primary bg-[#6d6ca2] text-white mt-2 mb-2">Review Details</button>
-      </div>
-
-      <!-- SCREEN 12-VERIFY: Address Verify -->
-      <div id="screen-12-verify" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Verify Address Details</h1>
-          <p class="text-lg font-medium text-slate-600">Please review your changes before submitting.</p>
-        </div>
-
-        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-3xl mx-auto w-full text-left">
-          <p class="text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">New Address Preview</p>
-          <p id="verify-address-text" class="text-2xl font-bold text-slate-900 leading-relaxed notranslate">
-            <!-- Populated via JS -->
-            123, Sample Street, New Delhi
-          </p>
-          <div class="mt-6 pt-6 border-t border-slate-100 flex items-center gap-4">
-              <span class="text-2xl notranslate">📄</span>
-              <div>
-                  <p class="text-sm font-bold text-slate-500">Document Attached</p>
-                  <p class="text-base font-semibold text-slate-800">Ready for submission</p>
-              </div>
-          </div>
-        </div>
-
-        <button onclick="confirmAction('Address Update Request Submitted', 'URN: URN9485739281. Keep this for tracking.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
-          Proceed to Payment (₹50)
-        </button>
-      </div>
-
-      <!-- SCREEN 13: Demographic Update Selection -->
-      <div id="screen-13" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Demographic Data</h1>
-          <p class="text-lg font-medium text-slate-600">Select the specific field you wish to update.</p>
-        </div>
-
-        <div class="grid grid-cols-3 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('name');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
-            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
-            <h2 class="text-3xl">Name</h2>
-          </button>
-          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('dob');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
-            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
-            <h2 class="text-3xl">Date of Birth</h2>
-          </button>
-          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('gender');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
-            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
-            <h2 class="text-3xl">Gender</h2>
-          </button>
-        </div>
-
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
-        </div>
-      </div>
-
-      <!-- SCREEN 13-INPUT: Demographic Forms -->
-      <div id="screen-13-input" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-8 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Enter New Details</h1>
-          <p class="text-lg font-medium text-slate-600">Provide the correct information and supporting documents.</p>
-        </div>
-
-        <div class="max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center mb-8">
-          
-          <!-- NAME FORM (Needs POI) -->
-          <div id="dynamic-form-name" class="hidden flex-col gap-5 w-full">
-             <input type="text" id="input-name" class="input-field notranslate" placeholder="Enter New Full Name (as per POI)">
-             <select id="doc-name" onchange="checkDocSelection('doc-name', 'btn-doc-name')" class="input-field text-slate-700 text-lg">
-               <option value="">Select Valid Supporting Document (POI)</option>
-               <option>Passport</option>
-               <option>PAN Card / e-PAN</option>
-               <option>Voter ID / e-Voter ID</option>
-               <option>Driving License</option>
-               <option>Ration / PDS Photo Card</option>
-               <option>Service Photo ID Card (Govt / PSU)</option>
-               <option>Pensioner Photo Card</option>
-               <option>CGHS / ECHS Photo Card</option>
-               <option>Kisan Photo Passbook</option>
-               <option>Marriage Certificate with Photograph</option>
-             </select>
-             <button id="btn-doc-name" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-2xl notranslate">📸</span><span>Provide POI Document</span>
-             </button>
-          </div>
-
-          <!-- DOB FORM (Needs DOB Document) -->
-          <div id="dynamic-form-dob" class="hidden flex-col gap-5 w-full">
-             <input type="date" id="input-dob" class="input-field text-slate-600 notranslate">
-             <select id="doc-dob" onchange="checkDocSelection('doc-dob', 'btn-doc-dob')" class="input-field text-slate-700 text-lg">
-               <option value="">Select Valid Supporting Document (DOB)</option>
-               <option>Birth Certificate</option>
-               <option>Passport</option>
-               <option>PAN Card / e-PAN</option>
-               <option>Mark Sheet / Certificate (Recognized Board or University)</option>
-               <option>Service Photo ID Card (Govt / PSU)</option>
-               <option>Central / State Pension Payment Order</option>
-               <option>Transgender ID Card / Certificate</option>
-             </select>
-             <button id="btn-doc-dob" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-2xl notranslate">📸</span><span>Provide DOB Document</span>
-             </button>
-          </div>
-
-          <!-- GENDER FORM (No document required usually for general correction, but based on conditions) -->
-          <div id="dynamic-form-gender" class="hidden flex justify-center gap-6 w-full">
-             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Male')"><h2>Male</h2></button>
-             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Female')"><h2>Female</h2></button>
-             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Transgender')"><h2>Transgender</h2></button>
-          </div>
-          
-        </div>
-
-        <!-- Continue Button (Enabled by JS for gender, always on for inputs) -->
-        <button id="btn-demo-continue" onclick="navigateTo('screen-13-verify')" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">Review Details</button>
-      </div>
-
-      <!-- SCREEN 13-VERIFY: Demographic Verify -->
-      <div id="screen-13-verify" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Verify Updated Details</h1>
-          <p class="text-lg font-medium text-slate-600">Please review your changes before submitting.</p>
-        </div>
-
-        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-3xl mx-auto w-full text-left">
-          <p id="verify-info-label" class="text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">New Detail Preview</p>
-          <p id="verify-info-text" class="text-3xl font-bold text-slate-900 leading-relaxed notranslate">
-            <!-- Populated via JS -->
-            Rahul K Sharma
-          </p>
-          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center gap-4">
-              <span class="text-2xl notranslate">📄</span>
-              <div>
-                  <p class="text-sm font-bold text-slate-500">Supporting Document Attached</p>
-                  <p class="text-base font-semibold text-slate-800">Ready for submission</p>
-              </div>
-          </div>
-        </div>
-
-        <button onclick="confirmAction('Update Request Submitted', 'URN: URN8827364521. Keep this URN to track status.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
-          Proceed to Payment (₹50)
-        </button>
-      </div>
-      
-      <!-- SCREEN 14: Document Update Form -->
-      <div id="screen-14" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-8 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Document Update (POI & POA)</h1>
-          <p class="text-lg font-medium text-slate-600">Submit updated Proof of Identity and Proof of Address documents.</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-8 w-full max-w-5xl mx-auto flex-1 mb-8">
-           <!-- POI -->
-           <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-              <h3 class="text-xl font-bold text-slate-800 mb-4">Proof of Identity (POI)</h3>
-              <select id="doc-14-poi" onchange="checkDocSelection('doc-14-poi', 'btn-14-poi')" class="input-field mb-6 text-lg text-slate-700">
-                <option value="">Select Valid Supporting Document (POI)</option>
-                <option>Passport</option>
-                <option>PAN Card / e-PAN</option>
-                <option>Voter ID / e-Voter ID</option>
-                <option>Driving License</option>
-                <option>Ration / PDS Photo Card</option>
-                <option>Service Photo ID Card (Govt / PSU)</option>
-                <option>Pensioner Photo Card</option>
-                <option>CGHS / ECHS Photo Card</option>
-                <option>Kisan Photo Passbook</option>
-                <option>Marriage Certificate with Photograph</option>
-              </select>
-              <button id="btn-14-poi" disabled onclick="openUploadModal(this)" type="button" class="mt-auto py-8 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-50 flex flex-col items-center justify-center gap-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-4xl notranslate">📸</span>
-                 <span class="text-lg">Provide POI Document</span>
-              </button>
-           </div>
-           <!-- POA -->
-           <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-              <h3 class="text-xl font-bold text-slate-800 mb-4">Proof of Address (POA)</h3>
-              <select id="doc-14-poa" onchange="checkDocSelection('doc-14-poa', 'btn-14-poa')" class="input-field mb-6 text-lg text-slate-700">
-                <option value="">Select Valid Supporting Document (POA)</option>
-                <option>Bank Account / Post Office Passbook or Statement</option>
-                <option>Voter ID / e-Voter ID</option>
-                <option>Passport</option>
-                <option>Ration Card</option>
-                <option>Driving License</option>
-                <option>Electricity Bill (not older than 3 months)</option>
-                <option>Water Bill (not older than 3 months)</option>
-                <option>Gas Connection Bill (not older than 3 months)</option>
-                <option>Telephone / Broadband Bill (not older than 3 months)</option>
-                <option>Registered Lease / Rent / Sale Agreement</option>
-                <option>Property Tax Receipt (not older than 1 year)</option>
-                <option>Allotment Letter of Accommodation (Govt)</option>
-              </select>
-              <button id="btn-14-poa" disabled onclick="openUploadModal(this)" type="button" class="mt-auto py-8 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-50 flex flex-col items-center justify-center gap-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-4xl notranslate">📸</span>
-                 <span class="text-lg">Provide POA Document</span>
-              </button>
-           </div>
-        </div>
-
-        <div class="mt-auto pb-4">
-          <button onclick="confirmAction('Document Update Submitted', 'SRN: DOC928374001. Verification in progress.', true)" class="btn-primary bg-[#6d6ca2] text-white">Proceed to Payment (₹50)</button>
-        </div>
-      </div>
-
-      <!-- SCREEN 16: Lock / Unlock Aadhaar -->
-      <div id="screen-16" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center items-center">
-        <h1 class="text-3xl font-extrabold text-slate-900 mb-10">Aadhaar Lock Status</h1>
-        
-        <div class="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm mb-12 flex flex-col items-center max-w-xl w-full">
-          <h2 class="text-4xl font-black text-slate-900 mb-4 tracking-wide text-emerald-700">UNLOCKED</h2>
-          <p class="text-lg font-medium text-slate-600">Your Aadhaar is currently active and can be used for authentication.</p>
-        </div>
-
-        <button onclick="confirmAction('Aadhaar Locked Successfully', 'Your Aadhaar number is secured and cannot be used for authentication until unlocked.')" class="w-full max-w-sm mx-auto py-4 bg-slate-800 text-white text-xl font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-md">
-          Lock Aadhaar
-        </button>
-      </div>
-
-      <!-- SCREEN 17: Lock / Unlock Biometrics -->
-      <div id="screen-17" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center items-center">
-        <h1 class="text-3xl font-extrabold text-slate-900 mb-10">Biometric Lock Status</h1>
-        
-        <div class="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm mb-12 flex flex-col items-center max-w-xl w-full">
-          <h2 class="text-4xl font-black text-slate-900 mb-4 tracking-wide text-emerald-700">UNLOCKED</h2>
-          <p class="text-lg font-medium text-slate-600">Your fingerprints and iris scan can be used for authentication.</p>
-        </div>
-
-        <button onclick="confirmAction('Biometrics Locked Successfully', 'Biometric authentication is disabled to prevent misuse.')" class="w-full max-w-sm mx-auto py-4 bg-slate-800 text-white text-xl font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-md">
-          Lock Biometrics
-        </button>
-      </div>
-
-      <!-- SCREEN 18: Generate Virtual ID -->
-      <div id="screen-18" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center justify-center">
-        <h1 class="text-3xl font-extrabold text-slate-900 mb-4">Virtual ID (VID) Generator</h1>
-        <p class="text-lg font-medium text-slate-600 px-4 max-w-2xl mb-10">A Virtual ID is a temporary, revocable 16-digit number mapped to your Aadhaar. It can be used securely in place of your Aadhaar number.</p>
-
-        <div id="vid-result" class="hidden bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-xl w-full text-center">
-          <p class="text-sm text-slate-500 font-bold uppercase tracking-widest mb-4">Your New Virtual ID</p>
-          <p class="text-4xl font-black text-slate-900 tracking-widest notranslate">9482 1039 4857 2011</p>
-        </div>
-
-        <button id="vid-gen-btn" onclick="generateVID()" class="btn-primary bg-[#6d6ca2] text-white w-full max-w-sm">
-          Generate Virtual ID
-        </button>
-        <button id="vid-finish-btn" onclick="goHome()" class="hidden btn-secondary">
-          Finish
-        </button>
-      </div>
-
-      <!-- SCREEN 21: Payment Options -->
-      <div id="screen-21" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center">
-        
-        <div id="payment-selection-view" class="w-full flex-1 flex flex-col">
-            <div class="mb-8 mt-4 text-center">
-              <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Select Payment Method</h1>
-              <p class="text-lg font-medium text-slate-600">Amount Due: <span class="font-bold text-[#6d6ca2] text-2xl ml-1 notranslate">₹50.00</span></p>
-            </div>
-
-            <div class="grid grid-cols-1 gap-5 max-w-xl mx-auto w-full flex-1 content-start pb-8">
-               <!-- UPI -->
-               <button onclick="processPayment('UPI')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
-                  <div class="flex items-center gap-5">
-                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">📱</div>
-                     <div class="text-left">
-                        <h3 class="text-xl font-bold text-slate-800">UPI / QR Code</h3>
-                        <p class="text-sm text-slate-500 font-medium mt-1">Google Pay, PhonePe, Paytm, etc.</p>
-                     </div>
-                  </div>
-                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
-               </button>
-               <!-- Card -->
-               <button onclick="processPayment('Credit/Debit Card')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
-                  <div class="flex items-center gap-5">
-                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">💳</div>
-                     <div class="text-left">
-                        <h3 class="text-xl font-bold text-slate-800">Credit / Debit Card</h3>
-                        <p class="text-sm text-slate-500 font-medium mt-1">Visa, Mastercard, RuPay</p>
-                     </div>
-                  </div>
-                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
-               </button>
-               <!-- Net Banking -->
-               <button onclick="processPayment('Net Banking')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
-                  <div class="flex items-center gap-5">
-                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">🏦</div>
-                     <div class="text-left">
-                        <h3 class="text-xl font-bold text-slate-800">Net Banking</h3>
-                        <p class="text-sm text-slate-500 font-medium mt-1">All major Indian banks</p>
-                     </div>
-                  </div>
-                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
-               </button>
-            </div>
-        </div>
-
-        <div id="payment-processing-view" class="hidden w-full flex-1 flex-col items-center justify-center">
-            <div class="w-20 h-20 border-8 border-slate-200 border-t-[#6d6ca2] rounded-full animate-spin mb-8"></div>
-            <h2 class="text-3xl font-bold text-slate-800 mb-3">Processing Payment...</h2>
-            <p class="text-slate-500 text-lg font-medium">Please do not refresh or press back.</p>
-        </div>
-      </div>
-
-      <!-- SCREEN 19: Universal Confirmation -->
-      <div id="screen-19" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade items-center justify-center text-center">
-        <div class="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-8 notranslate">
-            <span class="text-5xl">✓</span>
-        </div>
-        <h1 id="confirm-title" class="text-4xl font-extrabold text-slate-900 mb-4">Request Completed</h1>
-        <p id="confirm-subtitle" class="text-xl font-medium text-slate-600 mb-12">Service Request Number: XXXX</p>
-        
-        <div class="flex gap-4 w-full max-w-md mx-auto">
-          <button onclick="goHome()" class="flex-1 py-4 bg-white border border-slate-300 text-slate-700 text-lg font-bold rounded-xl active:bg-slate-50 transition-colors shadow-sm">
-            Print Receipt
-          </button>
-          <button onclick="goHome()" class="flex-1 py-4 bg-slate-800 text-white text-lg font-bold rounded-xl active:bg-slate-900 transition-colors shadow-sm">
-            Go Home
+        <div class="flex items-center gap-2">
+          <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold hidden sm:inline-flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Screen Synchronized
+          </span>
+          <button id="modal-close-btn" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors">
+            <i class="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
       </div>
 
-      <!-- SCREEN 15 (Check Status Timeline) -->
-      <div id="screen-15" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center">
-        <div class="mb-8 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Status</h1>
-          <p class="text-lg font-medium text-slate-600 font-mono notranslate">SRN: 8472938475</p>
-        </div>
-
-        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 flex-1 max-w-xl w-full flex justify-center text-left">
-          <!-- Timeline -->
-          <div class="relative border-l-2 border-slate-200 ml-4 flex flex-col gap-10">
-            <div class="relative pl-8">
-              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-emerald-600 border-4 border-white shadow-sm"></div>
-              <h3 class="text-xl font-bold text-slate-900">Request Submitted</h3>
-              <p class="text-base font-medium text-slate-500 mt-1 notranslate">12 Oct 2023</p>
-            </div>
-            <div class="relative pl-8">
-              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-emerald-600 border-4 border-white shadow-sm"></div>
-              <h3 class="text-xl font-bold text-slate-900">Payment Successful</h3>
-              <p class="text-base font-medium text-slate-500 mt-1 notranslate">12 Oct 2023</p>
-            </div>
-            <div class="relative pl-8">
-              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-amber-500 border-4 border-white shadow-sm"></div>
-              <h3 class="text-xl font-bold text-slate-900">Under Review</h3>
-              <p class="text-base font-medium text-slate-500 mt-1">Processing documents...</p>
-            </div>
-            <div class="relative pl-8 opacity-40">
-              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-slate-300 border-4 border-white shadow-sm"></div>
-              <h3 class="text-xl font-bold text-slate-900">Update Completed</h3>
-              <p class="text-base font-medium text-slate-500 mt-1">Pending</p>
-            </div>
-          </div>
-        </div>
-
-        <button onclick="goHome()" class="btn-primary bg-[#6d6ca2] text-white mb-4 w-full">Done</button>
+      <!-- Live interactive frame embedding the Aadhaar prototype interface -->
+      <div class="flex-1 w-full bg-slate-950 rounded-2xl overflow-hidden border border-white/10 relative shadow-inner">
+        <iframe id="kiosk-iframe" src="kiosk-interface.html" class="w-full h-full border-0 rounded-2xl" allow="camera; microphone; display-capture"></iframe>
       </div>
 
-      <!-- SCREEN 20: Session End -->
-      <div id="screen-20" class="screen hidden absolute inset-0 flex flex-col p-10 bg-slate-900 text-white screen-fade items-center justify-center text-center">
-        <h1 class="text-5xl font-extrabold mb-6">Thank You</h1>
-        <p class="text-xl font-medium text-slate-400 mb-12 max-w-xl leading-relaxed">
-          Your session has safely ended.<br/><br/>
-          All personal information has been securely cleared from this kiosk to protect your privacy.
-        </p>
-        
-        <p class="text-lg font-medium text-slate-500 mb-10">Returning to home in <span id="countdown" class="font-bold text-white text-2xl mx-1 notranslate">10</span> seconds</p>
-        
-        <button onclick="navigateTo('screen-01')" class="btn-primary m-0 border border-slate-700 bg-slate-800 hover:bg-slate-700 shadow-none text-white">
-          Finish Now
+      <div class="pt-3 mt-1 flex items-center justify-between text-xs text-slate-400">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+          <span>Official UIDAI High-Security Interactive Session</span>
+        </div>
+        <button id="modal-cancel-btn" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 font-semibold text-xs text-slate-200 transition-colors">
+          Exit Terminal View
         </button>
-      </div>
-
-    </main>
-
-    <!-- Bottom Nav -->
-    <footer id="bottom-nav" class="flex-none flex items-center justify-between px-10 py-5 bg-white border-t border-slate-200 hidden z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
-      <div class="flex gap-4">
-        <button onclick="goBack()" class="px-8 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-lg hover:bg-slate-200 transition-colors">Back</button>
-        <button onclick="goHome()" class="px-8 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-lg hover:bg-slate-200 transition-colors">Home</button>
-      </div>
-      <div class="flex items-center gap-8">
-        <div class="text-center">
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Session</p>
-          <p id="session-timer-display" class="text-xl font-bold text-slate-700 font-mono leading-none mt-1 notranslate">02:00</p>
-        </div>
-        <button onclick="cancelSession()" class="px-6 py-3 rounded-xl text-[#6d6ca2] font-bold text-lg hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
-          Cancel Session
-        </button>
-      </div>
-    </footer>
-
-    <!-- Upload Modal Overlay -->
-    <div id="upload-modal" class="hidden absolute inset-0 bg-slate-900/60 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-      <div class="bg-white rounded-[2rem] p-10 max-w-2xl w-full shadow-2xl border border-slate-200 text-center flex flex-col gap-8 animate-[fadeIn_0.2s_ease-out]">
-          <h2 class="text-3xl font-extrabold text-slate-900">Provide Document</h2>
-          <p class="text-lg text-slate-600 font-medium -mt-4">Choose how you would like to securely provide this document.</p>
-          
-          <div class="flex gap-6">
-              <!-- Scan Option -->
-              <button onclick="simulateUpload('Scanner')" class="flex-1 bg-white border-2 border-slate-200 rounded-2xl p-8 hover:bg-slate-50 hover:border-slate-400 transition-all group flex flex-col items-center gap-4">
-                  <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl group-hover:bg-slate-200 transition-colors notranslate">🖨️</div>
-                  <span class="text-xl font-bold text-slate-800">Scan Physical Copy</span>
-                  <span class="text-sm text-slate-500 font-medium">Place on kiosk scanner bed</span>
-              </button>
-              
-              <!-- DigiLocker Option -->
-              <button onclick="simulateUpload('DigiLocker')" class="flex-1 bg-white border-2 border-slate-200 rounded-2xl p-8 hover:bg-sky-50 hover:border-sky-600 transition-all group flex flex-col items-center gap-4">
-                  <div class="w-20 h-20 bg-sky-50 rounded-full flex items-center justify-center text-4xl group-hover:bg-sky-100 transition-colors notranslate">☁️</div>
-                  <span class="text-xl font-bold text-slate-800">Fetch from DigiLocker</span>
-                  <span class="text-sm text-slate-500 font-medium">Secure cloud import</span>
-              </button>
-          </div>
-          
-          <button onclick="closeUploadModal()" class="mt-2 text-slate-500 font-bold text-lg hover:text-slate-800 transition-colors">Cancel</button>
       </div>
     </div>
-
-    <!-- Timeout Modal Overlay -->
-    <div id="timeout-modal" class="hidden absolute inset-0 bg-slate-900/80 z-[100] flex items-center justify-center backdrop-blur-sm transition-opacity">
-      <div class="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl border border-slate-200 text-center flex flex-col gap-6 animate-[fadeIn_0.2s_ease-out]">
-          <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-4xl mx-auto notranslate">⏳</div>
-          <h2 class="text-3xl font-extrabold text-slate-900">Are you still there?</h2>
-          <p class="text-lg text-slate-600 font-medium">Your session will expire in <span id="warning-countdown" class="font-bold text-[#6d6ca2] text-2xl notranslate">10</span> seconds to protect your privacy.</p>
-          <button onclick="extendSession(event)" class="btn-primary bg-[#6d6ca2] text-white mt-4 w-full">OK, Continue</button>
-      </div>
-    </div>
-
   </div>
-</div>
-
-<!-- Google Translate Widget Script -->
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-        pageLanguage: 'en',
-        includedLanguages: 'en,hi,mr,gu,bn,ta',
-        autoDisplay: false
-    }, 'google_translate_element');
-  }
-</script>
-<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 <script>
-  let currentScreen = 'screen-01';
-  const screenStack = [];
-  let authNextScreen = 'screen-03';
-  let selectedAction = null;
-  let selectedLanguageCode = 'en';
-  let currentUpdateMode = 'name';
-  let selectedGender = '';
-  let activeUploadButton = null;
-
-  // Authentication State Variables
-  let authStep = 1;      // 1: Aadhaar (4 digits), 2: Phone (10 digits), 3: OTP (4 digits)
-  let authInput = '';    // Current value being typed
-  let authPhone = '';    // Stored phone number for display in Step 3
-  
-  let currentTotalSteps = 4; // Tracks dynamic progress bar length
-
-  // Explicitly list classes for selection so the Tailwind CDN doesn't purge them or fail on pseudo-classes
-  const activeCardClasses = ['bg-indigo-50', 'border-[#6d6ca2]', 'ring-2', 'ring-[#6d6ca2]'];
-  const inactiveCardClasses = ['bg-white', 'border-slate-200'];
-  
-  function updateProgressBar(screenId) {
-    const pb = document.getElementById('top-progress');
-    if (!pb) return;
-    
-    let percent = 0;
-    let showBar = true;
-
-    if (['screen-03', 'screen-04', 'screen-05', 'screen-06'].includes(screenId)) {
-        percent = 0;
-    }
-    else if (screenId === 'screen-13' || screenId === 'screen-11') {
-        percent = 25;
-    }
-    else if (screenId === 'screen-07') {
-        percent = 35;
-    }
-    else if (['screen-12-input', 'screen-13-input', 'screen-10', 'screen-14', 'screen-08', 'screen-16', 'screen-17', 'screen-18'].includes(screenId)) {
-        percent = 60;
-    }
-    else if (['screen-12-verify', 'screen-13-verify'].includes(screenId)) {
-        percent = 80;
-    }
-    else if (screenId === 'screen-21') {
-        percent = 90;
-    }
-    else if (['screen-19', 'screen-09', 'screen-15'].includes(screenId)) {
-        percent = 100;
-    }
-    else {
-        showBar = false;
-    }
-
-    if (showBar) {
-        pb.classList.remove('hidden');
-        document.getElementById('progress-fill').style.width = `${percent}%`;
-    } else {
-        pb.classList.add('hidden');
-    }
-  }
-
-  function navigateTo(screenId) {
-    if (screenId !== currentScreen && screenId !== 'screen-20') {
-      screenStack.push(currentScreen);
-    }
-    document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
-    document.getElementById(screenId).classList.remove('hidden');
-    currentScreen = screenId;
-    updateNav(screenId);
-    
-    // Setup Auth Screen if triggered
-    if (screenId === 'screen-07') {
-      resetAuth();
-    }
-    
-    // Copy input details to verification screens
-    if (screenId === 'screen-12-verify') {
-      const co = document.getElementById('addr-co').value.trim();
-      const house = document.getElementById('addr-house').value.trim();
-      const street = document.getElementById('addr-street').value.trim();
-      const area = document.getElementById('addr-area').value.trim();
-      const city = document.getElementById('addr-city').value.trim();
-      const state = document.getElementById('addr-state').value.trim();
-      const pincode = document.getElementById('addr-pincode').value.trim();
-      
-      const fullAddress = [co, house, street, area, city, state, pincode].filter(Boolean).join(', ');
-      document.getElementById('verify-address-text').innerText = fullAddress || '(No details provided)';
-    }
-    
-    if (screenId === 'screen-13-verify') {
-      let val = '';
-      if (currentUpdateMode === 'name') val = document.getElementById('input-name').value.trim();
-      if (currentUpdateMode === 'dob') val = document.getElementById('input-dob').value;
-      if (currentUpdateMode === 'gender') val = selectedGender;
-      
-      document.getElementById('verify-info-text').innerText = val || '(Not Provided)';
-    }
-
-    if (screenId === 'screen-20') {
-      startCountdown();
-    }
-    
-    // Timer logic hook
-    if (screenId === 'screen-01' || screenId === 'screen-20') {
-      stopSessionTimer();
-    } else if (!sessionTimerInterval) {
-      resetSessionTimer();
-    }
-    
-    // Refresh floating progress bar based on new screen
-    updateProgressBar(screenId);
-  }
-
-  function goBack() {
-    if (screenStack.length > 0) {
-      const prev = screenStack.pop();
-      document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
-      document.getElementById(prev).classList.remove('hidden');
-      currentScreen = prev;
-      updateNav(currentScreen);
-      updateProgressBar(currentScreen);
-    } else {
-      goHome();
-    }
-  }
-
-  function goHome() {
-    screenStack.length = 0;
-    navigateTo('screen-03');
-  }
-
-  function cancelSession() {
-    screenStack.length = 0;
-    navigateTo('screen-20');
-  }
-
-  function updateNav(screenId) {
-    const bottomNav = document.getElementById('bottom-nav');
-    const screen = document.getElementById(screenId);
-    
-    if (['screen-01', 'screen-20'].includes(screenId)) {
-      bottomNav.classList.add('hidden');
-    } else {
-      bottomNav.classList.remove('hidden');
-    }
-
-    // Reset screen selection state upon entry
-    selectedAction = null;
-    if(screen) {
-      screen.querySelectorAll('.menu-card').forEach(el => {
-        el.classList.remove(...activeCardClasses);
-        el.classList.add(...inactiveCardClasses);
-      });
-      const continueBtn = screen.querySelector('.continue-btn');
-      if (continueBtn) {
-        continueBtn.disabled = true;
-        continueBtn.classList.remove('bg-[#6d6ca2]', 'text-white', 'shadow-md');
-        continueBtn.classList.add('bg-slate-300', 'text-slate-500');
+  /* -------------------------------------------------------------
+     Audio Synthesizer (Web Audio API for tactile feedback)
+  ------------------------------------------------------------- */
+  const AudioEngine = {
+    ctx: null,
+    init() {
+      if (!this.ctx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
       }
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    },
+    playBeep(freq = 880, duration = 0.08, type = 'sine') {
+      try {
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      } catch (e) {}
+    },
+    playDoorChime(open = true) {
+      try {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        if (open) {
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+        } else {
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.exponentialRampToValueAtTime(440, now + 0.2);
+        }
+        gain.gain.setValueAtTime(0.07, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } catch (e) {}
     }
+  };
+
+  /* -------------------------------------------------------------
+     Global State & Scene References
+  ------------------------------------------------------------- */
+  let scene, camera, renderer, orbitControls, container;
+  let isWalkMode = true;
+  let isNightLighting = true;
+  let ambientLight;
+  let mainSpotlights = [];
+  let kioskGroupList = [];
+  let interactiveScreens = [];
+  let humanCharacters = [];
+  let tokenDisplayCanvas, tokenDisplayTexture;
+  let currentTokenNumber = 124;
+
+  // Automatic Sliding Glass Door State
+  let doorLeftMesh, doorRightMesh, doorSensorLedMat;
+  let doorForcedMode = 'auto'; // 'auto' | 'open' | 'closed'
+  let doorOpenPercent = 0;
+  let doorTargetPercent = 0;
+  let previousDoorAudibleState = false;
+
+  // First-Person Player State
+  const player = {
+    position: new THREE.Vector3(0, 1.65, 3.6),
+    velocity: new THREE.Vector3(0, 0, 0),
+    yaw: 0,
+    pitch: 0,
+    targetYaw: 0,
+    targetPitch: 0,
+    speed: 3.4,
+    sprintMultiplier: 1.75,
+    isDragging: false,
+    dragStart: { x: 0, y: 0 },
+    keys: {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+      sprint: false
+    }
+  };
+
+  /* -------------------------------------------------------------
+     Procedural Textures
+  ------------------------------------------------------------- */
+  function createOakWoodTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#8b6343';
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let i = 0; i < 60; i++) {
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(65, 42, 24, 0.16)' : 'rgba(180, 138, 98, 0.12)';
+      ctx.fillRect(0, i * 8.5, 512, 4 + (i % 3));
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
   }
 
-  function selectCard(btn, action) {
-    // Deselect siblings explicitly
-    const container = btn.parentElement;
-    container.querySelectorAll('.menu-card').forEach(el => {
-      el.classList.remove(...activeCardClasses);
-      el.classList.add(...inactiveCardClasses);
+  function createFloorTileTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    // Calm warm nude / travertine stone base
+    ctx.fillStyle = '#d9cfc1';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Subtle organic stone texture variation
+    for (let i = 0; i < 450; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const r = 1 + Math.random() * 4;
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(180, 165, 145, 0.14)' : 'rgba(245, 238, 228, 0.18)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Fine warm taupe grout lines
+    ctx.strokeStyle = '#bfb2a0';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, 252, 252);
+    ctx.strokeRect(258, 2, 252, 252);
+    ctx.strokeRect(2, 258, 252, 252);
+    ctx.strokeRect(258, 258, 252, 252);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(8, 6);
+    return tex;
+  }
+
+  function createBrandBannerTexture(title, subtitle, bgColor = '#1e3a8a') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 192;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 512, 192);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(6, 6, 500, 180);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 42px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, 256, 86);
+
+    ctx.fillStyle = '#fde68a';
+    ctx.font = '600 22px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(subtitle, 256, 134);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function createFrostedGlassDecalTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 512, 512);
+
+    // Frosted privacy band across center
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+    ctx.fillRect(0, 175, 512, 170);
+
+    ctx.fillStyle = '#1e3a8a';
+    ctx.fillRect(0, 175, 512, 10);
+    ctx.fillRect(0, 335, 512, 10);
+
+    ctx.fillStyle = '#1d4ed8';
+    ctx.font = '800 54px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CSC • AADHAAR', 256, 250);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '700 24px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('DIGITAL INDIA SEVA KENDRA', 256, 292);
+
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 18px "JetBrains Mono", monospace';
+    ctx.fillText('AUTOMATIC SENSOR DOOR • 24x7', 256, 322);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function createKioskScreenTexture(podIndex, stepIndex) {
+    // Exact visual rendering of G:\Github\Virtual interface\index.html in 11:8 landscape
+    const steps = [
+      {
+        title: 'Select Service / सेवा चुनें',
+        sub: 'Touch to select an option • English / हिंदी',
+        cards: ['Aadhaar Update & Corrections', 'Biometric & Photo Lock/Unlock', 'Download / Order PVC Card', 'Check Enrolment Status']
+      },
+      {
+        title: 'Enter 12-Digit Aadhaar',
+        sub: 'अपना 12 अंकों का आधार नंबर दर्ज करें',
+        cards: ['UID: 4892 •••• ••••', 'OTP sent to Linked Mobile', 'Biometric Verification Ready', 'Assisted Help Mode']
+      },
+      {
+        title: 'Biometric Capture Stage',
+        sub: 'Place thumb on scanner platen / अंगूठा रखें',
+        cards: ['Face Liveness: 98% Confirmed', 'Iris Alignment: Optimal', 'Fingerprint Scan: Processing', 'Security Hash Encrypted']
+      }
+    ];
+
+    const currentStep = steps[stepIndex % steps.length];
+    const canvas = document.createElement('canvas');
+    canvas.width = 1100;
+    canvas.height = 800; // 11:8 ratio matching index.html
+    const ctx = canvas.getContext('2d');
+
+    // Outer Bezel Frame
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, 1100, 800);
+
+    // Screen Inner Background (matches index.html '#f5eae7' warm peach/cream background)
+    ctx.fillStyle = '#f5eae7';
+    ctx.beginPath();
+    ctx.roundRect(24, 24, 1052, 752, 36);
+    ctx.fill();
+
+    // Top Navigation Header Bar of index.html
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(44, 44, 1012, 90, 22);
+    ctx.fill();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Government of India & UIDAI Logo badge
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.roundRect(62, 58, 62, 62, 16);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 30px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('आ', 93, 102);
+
+    ctx.fillStyle = '#1e293b';
+    ctx.textAlign = 'left';
+    ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('Unique Identification Authority of India', 140, 84);
+    ctx.font = '600 16px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(`Government of India • Kiosk Station 0${podIndex}`, 140, 112);
+
+    // Language / Help Pill
+    ctx.fillStyle = '#f1f5f9';
+    ctx.beginPath();
+    ctx.roundRect(880, 60, 150, 56, 16);
+    ctx.fill();
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.stroke();
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 17px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('English / हिंदी', 955, 95);
+
+    // Main Content Title from index.html
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 36px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(currentStep.title, 56, 192);
+
+    ctx.fillStyle = '#475569';
+    ctx.font = '500 20px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(currentStep.sub, 56, 230);
+
+    // 2x2 Grid of Interactive Action Cards matching index.html
+    const gridCols = [56, 564];
+    const gridRows = [265, 435];
+    currentStep.cards.forEach((label, i) => {
+      const gx = gridCols[i % 2];
+      const gy = gridRows[Math.floor(i / 2)];
+      
+      // Card Box
+      ctx.fillStyle = i === 0 ? '#ffffff' : '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(gx, gy, 480, 145, 24);
+      ctx.fill();
+      ctx.strokeStyle = i === 0 ? '#6d6ca2' : '#e2e8f0';
+      ctx.lineWidth = i === 0 ? 3.5 : 2;
+      ctx.stroke();
+
+      // Icon circle
+      ctx.fillStyle = i === 0 ? '#6d6ca2' : '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(gx + 55, gy + 72, 32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = i === 0 ? '#ffffff' : '#6d6ca2';
+      ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(i + 1), gx + 55, gy + 81);
+
+      // Card Label
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '700 20px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, gx + 104, gy + 79);
     });
-    
-    // Select this card explicitly
-    btn.classList.remove(...inactiveCardClasses);
-    btn.classList.add(...activeCardClasses);
-    selectedAction = action;
 
-    // Enable continue button within the same screen
-    const screen = btn.closest('.screen');
-    const continueBtn = screen.querySelector('.continue-btn');
-    if (continueBtn) {
-      continueBtn.disabled = false;
-      continueBtn.classList.remove('bg-slate-300', 'text-slate-500');
-      continueBtn.classList.add('bg-[#6d6ca2]', 'text-white', 'shadow-md');
+    // Bottom CTA Button matching index.html primary button (#6d6ca2)
+    ctx.fillStyle = '#6d6ca2';
+    ctx.beginPath();
+    ctx.roundRect(310, 630, 480, 85, 22);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Touch Screen to Open Interface ➔', 550, 683);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return { texture: tex, currentStep };
+  }
+
+  /* -------------------------------------------------------------
+     Architectural Room Construction (Vestibule, HVAC, Louvers, Doors)
+  ------------------------------------------------------------- */
+  function buildBankArchitecture() {
+    const oakWoodTex = createOakWoodTexture();
+    const floorTileTex = createFloorTileTexture();
+
+    // 1. Satin-Matte Calm Nude Travertine Tile Floor
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(16, 8.2),
+      new THREE.MeshStandardMaterial({ map: floorTileTex, roughness: 0.36, metalness: 0.04 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, 0, 1.5);
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Muted Warm Terracotta/Amber Safety Boundary Line (1.4m in front of Kiosks)
+    const safetyLine = new THREE.Mesh(
+      new THREE.PlaneGeometry(12.8, 0.07),
+      new THREE.MeshBasicMaterial({ color: 0xd97706 })
+    );
+    safetyLine.rotation.x = -Math.PI / 2;
+    safetyLine.position.set(0, 0.004, 0.85);
+    scene.add(safetyLine);
+
+    // 2. Warm Linen / Soft Oatmeal Plaster Walls
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xe6ddd0, roughness: 0.72 });
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(16, 4.0, 0.25), wallMat);
+    backWall.position.set(0, 2.0, -1.2);
+    backWall.receiveShadow = true;
+    scene.add(backWall);
+
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.25, 4.0, 7.0), wallMat);
+    leftWall.position.set(-7.9, 2.0, 2.2);
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.25, 4.0, 7.0), wallMat);
+    rightWall.position.set(7.9, 2.0, 2.2);
+    scene.add(leftWall, rightWall);
+
+    // Backlit Warm Wood Feature Wall Panels & CSC / Digital India Wall Signage (From Reference)
+    const woodFeatureWall = new THREE.Mesh(
+      new THREE.BoxGeometry(13.4, 2.7, 0.08),
+      new THREE.MeshStandardMaterial({ map: oakWoodTex, roughness: 0.45 })
+    );
+    woodFeatureWall.position.set(0, 1.55, -1.06);
+    scene.add(woodFeatureWall);
+
+    const cscSignTex = createBrandBannerTexture('CSC • AADHAAR SEVA', 'COMMON SERVICE CENTRE • BANK BC POINT', '#1e3a8a');
+    const rightWallSign = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.6, 1.0),
+      new THREE.MeshBasicMaterial({ map: cscSignTex })
+    );
+    rightWallSign.position.set(7.76, 2.15, 2.1);
+    rightWallSign.rotation.y = -Math.PI / 2;
+    scene.add(rightWallSign);
+
+    // 3. Soft Nude / Warm Alabaster POP False Ceiling, Warm Cove Lighting & Recessed Downlights
+    const ceiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(16, 7.2),
+      new THREE.MeshStandardMaterial({ color: 0xe3d8c8, roughness: 0.65 })
+    );
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.set(0, 3.85, 2.2);
+    ceiling.receiveShadow = true;
+    scene.add(ceiling);
+
+    // Soft Recessed Ceiling Coffer Tray for Realistic Architectural Depth
+    const cofferMat = new THREE.MeshStandardMaterial({ color: 0xd7cab8, roughness: 0.7 });
+    const cofferBorderFront = new THREE.Mesh(new THREE.BoxGeometry(15.4, 0.14, 0.35), cofferMat);
+    cofferBorderFront.position.set(0, 3.78, 5.15);
+    const cofferBorderBack = new THREE.Mesh(new THREE.BoxGeometry(15.4, 0.14, 0.35), cofferMat);
+    cofferBorderBack.position.set(0, 3.78, -0.75);
+    scene.add(cofferBorderFront, cofferBorderBack);
+
+    // Warm Amber-Gold Cove Lighting Perimeter Strips
+    const coveMat = new THREE.MeshBasicMaterial({ color: 0xfcd34d });
+    const coveFront = new THREE.Mesh(new THREE.BoxGeometry(15.2, 0.04, 0.06), coveMat);
+    coveFront.position.set(0, 3.75, 4.96);
+    const coveBack = new THREE.Mesh(new THREE.BoxGeometry(15.2, 0.04, 0.06), coveMat);
+    coveBack.position.set(0, 3.75, -0.56);
+    scene.add(coveFront, coveBack);
+
+    // Warm Recessed LED Pot Downlights (3200K warm architectural tone)
+    [-5.0, -1.7, 1.7, 5.0].forEach(lx => {
+      [0.4, 3.4].forEach(lz => {
+        const pot = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.13, 0.13, 0.03, 20),
+          new THREE.MeshBasicMaterial({ color: 0xfff3d6 })
+        );
+        pot.position.set(lx, 3.84, lz);
+        scene.add(pot);
+      });
+    });
+
+    // 4. Centralized HVAC System (4-Way Ceiling Cassette AC Units, Linear Diffusers & Thermostat)
+    buildCentralizedHVAC();
+
+    // 5. Privacy Oak Slat Louvers Between the 4 Kiosk Pods
+    buildPrivacyLouvers(oakWoodTex);
+
+    // 6. Automatic Sliding Glass Entrance Doors & Motion Sensor
+    buildEntranceGlassDoors();
+
+    // 7. Outdoor Street Plaza Backdrop
+    buildOutdoorBackdrop();
+
+    // 8. Vestibule Props (Live Queue Board, Bench, Water Dispenser, Fire Extinguisher, Bins, Plants)
+    buildVestibuleProps();
+
+    // 9. Realistic 1:1 Scale Human Citizens
+    buildHumanCharacters();
+  }
+
+  /* -------------------------------------------------------------
+     Centralized HVAC System (Ceiling Cassettes, Linear Diffusers & Thermostat)
+  ------------------------------------------------------------- */
+  function buildCentralizedHVAC() {
+    const acHousingMat = new THREE.MeshStandardMaterial({ color: 0xe5dcd0, roughness: 0.38, metalness: 0.08 });
+    const louverMat = new THREE.MeshStandardMaterial({ color: 0x47423d, roughness: 0.5 });
+
+    // Two 4-Way Commercial Ceiling Cassette AC Units along Central Aisle
+    [-2.8, 2.8].forEach(cx => {
+      const cassetteGroup = new THREE.Group();
+      cassetteGroup.position.set(cx, 3.82, 2.2);
+
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.06, 1.15), acHousingMat);
+      cassetteGroup.add(panel);
+
+      // Center Return Air Grille
+      const centerGrille = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.068, 0.56), louverMat);
+      cassetteGroup.add(centerGrille);
+
+      // 4 Perimeter Directional Air Supply Vents
+      [
+        [0, 0.42, 0.72, 0.08],
+        [0, -0.42, 0.72, 0.08],
+        [0.42, 0, 0.08, 0.72],
+        [-0.42, 0, 0.08, 0.72]
+      ].forEach(([vx, vz, vw, vd]) => {
+        const vent = new THREE.Mesh(new THREE.BoxGeometry(vw, 0.072, vd), louverMat);
+        vent.position.set(vx, 0, vz);
+        cassetteGroup.add(vent);
+      });
+
+      // Green Active Cooling Status LED
+      const acLed = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+      acLed.position.set(0.46, -0.032, 0.46);
+      cassetteGroup.add(acLed);
+
+      scene.add(cassetteGroup);
+    });
+
+    // Continuous Architectural Linear Slot Diffuser above Kiosk Bay
+    const linearDiffuser = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.04, 0.22), louverMat);
+    linearDiffuser.position.set(0, 3.83, 0.55);
+    scene.add(linearDiffuser);
+
+    // Digital Wall HVAC Thermostat Controller on Right Wall
+    const thermoBox = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.16, 0.12), acHousingMat);
+    thermoBox.position.set(7.76, 1.48, 3.6);
+    const thermoScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.11), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
+    thermoScreen.position.set(7.738, 1.48, 3.6);
+    thermoScreen.rotation.y = -Math.PI / 2;
+    scene.add(thermoBox, thermoScreen);
+  }
+
+  /* -------------------------------------------------------------
+     Vertical Acoustic Oak Louver Partitions Between Kiosk Pods
+  ------------------------------------------------------------- */
+  function buildPrivacyLouvers(oakWoodTex) {
+    const slatMat = new THREE.MeshStandardMaterial({ map: oakWoodTex, roughness: 0.48 });
+    const plinthMat = new THREE.MeshStandardMaterial({ color: 0xdfd5c7, roughness: 0.45 });
+    const dividerXPositions = [-6.1, -3.1, 0.0, 3.1, 6.1];
+
+    dividerXPositions.forEach(dx => {
+      const partitionGroup = new THREE.Group();
+      partitionGroup.position.set(dx, 0, -0.35);
+
+      const baseRail = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 1.45), plinthMat);
+      baseRail.position.y = 0.06;
+      const topRail = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 1.45), plinthMat);
+      topRail.position.y = 3.78;
+      partitionGroup.add(baseRail, topRail);
+
+      for (let s = -0.62; s <= 0.62; s += 0.14) {
+        const slat = new THREE.Mesh(new THREE.BoxGeometry(0.06, 3.64, 0.08), slatMat);
+        slat.position.set(0, 1.94, s);
+        slat.castShadow = true;
+        slat.receiveShadow = true;
+        partitionGroup.add(slat);
+      }
+
+      scene.add(partitionGroup);
+    });
+  }
+
+  /* -------------------------------------------------------------
+     Branded Automatic Sliding Glass Entrance Doors & Motion Sensor
+  ------------------------------------------------------------- */
+  function buildEntranceGlassDoors() {
+    const frontZ = 5.6;
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.22 });
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0xe0f2fe,
+      transparent: true,
+      opacity: 0.34,
+      roughness: 0.08,
+      metalness: 0.1
+    });
+    const decalTex = createFrostedGlassDecalTexture();
+    const decalMat = new THREE.MeshBasicMaterial({ map: decalTex, transparent: true, side: THREE.DoubleSide });
+
+    // Side Fixed Glass Curtain Walls (Left & Right of Sliding Door Opening)
+    [-4.85, 4.85].forEach(sx => {
+      const fixedGlass = new THREE.Mesh(new THREE.BoxGeometry(5.9, 2.75, 0.04), glassMat);
+      fixedGlass.position.set(sx, 1.38, frontZ);
+      const topFrame = new THREE.Mesh(new THREE.BoxGeometry(5.95, 0.08, 0.12), frameMat);
+      topFrame.position.set(sx, 2.76, frontZ);
+      const botFrame = new THREE.Mesh(new THREE.BoxGeometry(5.95, 0.08, 0.12), frameMat);
+      botFrame.position.set(sx, 0.04, frontZ);
+      scene.add(fixedGlass, topFrame, botFrame);
+    });
+
+    // Overhead Transom Glass & Motorized Track Header Housing
+    const headerHousing = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.24, 0.24), frameMat);
+    headerHousing.position.set(0, 2.84, frontZ);
+    const transomGlass = new THREE.Mesh(new THREE.BoxGeometry(15.6, 0.88, 0.04), glassMat);
+    transomGlass.position.set(0, 3.4, frontZ);
+    scene.add(headerHousing, transomGlass);
+
+    // Ultrasonic / Microwave Motion Sensor Box + LED Indicator (Interior & Exterior)
+    doorSensorLedMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    [-0.14, 0.14].forEach(sz => {
+      const sensorBody = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.07, 0.07),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 })
+      );
+      sensorBody.position.set(0, 2.94, frontZ + sz);
+      const sensorLed = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.018, 0.012), doorSensorLedMat);
+      sensorLed.position.set(0, 2.94, frontZ + sz + (sz > 0 ? 0.036 : -0.036));
+      scene.add(sensorBody, sensorLed);
+    });
+
+    // Subtle Floor Sensor Activation Zone Grid
+    const sensorZoneFloor = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.6, 2.4),
+      new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.09 })
+    );
+    sensorZoneFloor.rotation.x = -Math.PI / 2;
+    sensorZoneFloor.position.set(0, 0.005, frontZ);
+    scene.add(sensorZoneFloor);
+
+    // Left & Right Sliding Glass Door Panels
+    const buildDoorLeaf = (initialX, handleOffsetX) => {
+      const leafGroup = new THREE.Group();
+      leafGroup.position.set(initialX, 1.36, frontZ);
+
+      const pane = new THREE.Mesh(new THREE.BoxGeometry(1.12, 2.68, 0.035), glassMat);
+      const topRail = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.06, 0.07), frameMat);
+      topRail.position.y = 1.32;
+      const botRail = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.08, 0.07), frameMat);
+      botRail.position.y = -1.30;
+
+      // Frosted CSC / Aadhaar Branding Band
+      const decalPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 1.08), decalMat);
+      decalPlane.position.z = 0.02;
+
+      // Vertical Stainless Steel Pull Handle
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.65, 12), frameMat);
+      handle.position.set(handleOffsetX, -0.15, 0.05);
+
+      leafGroup.add(pane, topRail, botRail, decalPlane, handle);
+      scene.add(leafGroup);
+      return leafGroup;
+    };
+
+    doorLeftMesh = buildDoorLeaf(-0.56, 0.44);
+    doorRightMesh = buildDoorLeaf(0.56, -0.44);
+  }
+
+  /* -------------------------------------------------------------
+     Outdoor Urban Plaza Backdrop (Visible Beyond Sliding Glass Doors)
+  ------------------------------------------------------------- */
+  function buildOutdoorBackdrop() {
+    const sidewalk = new THREE.Mesh(
+      new THREE.PlaneGeometry(24, 10),
+      new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.85 })
+    );
+    sidewalk.rotation.x = -Math.PI / 2;
+    sidewalk.position.set(0, -0.01, 10.6);
+    scene.add(sidewalk);
+
+    const bollardMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.25 });
+    [-3.2, -1.6, 1.6, 3.2].forEach(bx => {
+      const bollard = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.85, 16), bollardMat);
+      bollard.position.set(bx, 0.425, 7.2);
+      const capLight = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.06, 16), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+      capLight.position.set(bx, 0.78, 7.2);
+      scene.add(bollard, capLight);
+    });
+
+    const backdropCanvas = document.createElement('canvas');
+    backdropCanvas.width = 1024;
+    backdropCanvas.height = 512;
+    const ctx = backdropCanvas.getContext('2d');
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, 512);
+    skyGrad.addColorStop(0, '#0f172a');
+    skyGrad.addColorStop(1, '#1e3a8a');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, 1024, 512);
+
+    for (let b = 0; b < 14; b++) {
+      const bw = 55 + (b % 3) * 20;
+      const bh = 180 + (b % 4) * 55;
+      const bx = b * 75 + 10;
+      const by = 512 - bh;
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(bx, by, bw, bh);
+      for (let wy = by + 16; wy < 490; wy += 24) {
+        for (let wx = bx + 10; wx < bx + bw - 14; wx += 18) {
+          ctx.fillStyle = (wx + wy) % 3 === 0 ? 'rgba(253, 224, 71, 0.45)' : 'rgba(147, 197, 253, 0.25)';
+          ctx.fillRect(wx, wy, 10, 12);
+        }
+      }
     }
+    const bgTex = new THREE.CanvasTexture(backdropCanvas);
+    const bgPlane = new THREE.Mesh(new THREE.PlaneGeometry(26, 10), new THREE.MeshBasicMaterial({ map: bgTex }));
+    bgPlane.position.set(0, 4.2, 15.2);
+    bgPlane.rotation.y = Math.PI;
+    scene.add(bgPlane);
   }
 
-  function selectLanguageCard(btn, langCode) {
-    selectCard(btn, 'screen-03');
-    selectedLanguageCode = langCode;
+  /* -------------------------------------------------------------
+     Vestibule Props: Queue Board, Waiting Seating, Water Dispenser, Fire Extinguisher, Bins
+  ------------------------------------------------------------- */
+  function buildVestibuleProps() {
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 });
+
+    // 1. Live Digital Queue & Token LED Board
+    tokenDisplayCanvas = document.createElement('canvas');
+    tokenDisplayCanvas.width = 512;
+    tokenDisplayCanvas.height = 192;
+    tokenDisplayTexture = new THREE.CanvasTexture(tokenDisplayCanvas);
+    updateQueueBoardCanvas();
+
+    const boardFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(1.75, 0.68, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.7, roughness: 0.3 })
+    );
+    boardFrame.position.set(0, 3.38, -1.08);
+    const boardScreen = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.65, 0.58),
+      new THREE.MeshBasicMaterial({ map: tokenDisplayTexture })
+    );
+    boardScreen.position.set(0, 3.38, -1.028);
+    scene.add(boardFrame, boardScreen);
+
+    // 2. Stainless steel receipt bins next to kiosks
+    const binXCoords = [-4.6, -1.6, 1.6, 4.6];
+    binXCoords.forEach(bx => {
+      const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.14, 0.68, 20), metalMat);
+      bin.position.set(bx + 0.58, 0.34, -0.58);
+      bin.castShadow = true;
+      const binRim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.15, 0.015, 10, 24),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b })
+      );
+      binRim.rotation.x = Math.PI / 2;
+      binRim.position.set(bx + 0.58, 0.68, -0.58);
+      scene.add(bin, binRim);
+    });
+
+    // 3. Citizen Waiting Chair Bench
+    const benchGroup = new THREE.Group();
+    benchGroup.position.set(-5.4, 0, 2.8);
+    benchGroup.rotation.y = Math.PI / 2;
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.06, 0.08), metalMat);
+    beam.position.y = 0.42;
+    benchGroup.add(beam);
+
+    [-1.1, 1.1].forEach(lx => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.46), metalMat);
+      leg.position.set(lx, 0.21, 0);
+      benchGroup.add(leg);
+    });
+
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.38 });
+    [-0.9, -0.3, 0.3, 0.9].forEach(sx => {
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.05, 0.44), seatMat);
+      seat.position.set(sx, 0.46, 0);
+      seat.castShadow = true;
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.44, 0.05), seatMat);
+      back.position.set(sx, 0.68, -0.2);
+      back.castShadow = true;
+      benchGroup.add(seat, back);
+    });
+    scene.add(benchGroup);
+
+    // 4. Water Dispenser & Red Fire Extinguisher near Entrance
+    const dispenserBody = new THREE.Mesh(
+      new THREE.BoxGeometry(0.38, 0.95, 0.38),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 })
+    );
+    dispenserBody.position.set(6.4, 0.475, 4.8);
+    const waterBottle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.15, 0.15, 0.44, 16),
+      new THREE.MeshPhysicalMaterial({ color: 0x0284c7, transparent: true, opacity: 0.65, roughness: 0.1 })
+    );
+    waterBottle.position.set(6.4, 1.17, 4.8);
+    scene.add(dispenserBody, waterBottle);
+
+    const extBody = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.09, 0.55, 16),
+      new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3, metalness: 0.4 })
+    );
+    extBody.position.set(5.9, 0.275, 4.9);
+    scene.add(extBody);
+
+    // 5. Ceiling Security CCTV Dome Cameras
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2 });
+    [-3.5, 3.5].forEach(cx => {
+      const cctvBase = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 16), domeMat);
+      cctvBase.position.set(cx, 3.83, 2.5);
+      const cctvGlass = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x020617 }));
+      cctvGlass.position.set(cx, 3.81, 2.5);
+      scene.add(cctvBase, cctvGlass);
+    });
+
+    // 6. Biophilic Potted Corner Plants
+    [-7.2, 7.2].forEach(px => {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.24, 0.6, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 }));
+      pot.position.set(px, 0.3, 4.5);
+      pot.castShadow = true;
+      scene.add(pot);
+
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.55 });
+      for (let l = 0; l < 10; l++) {
+        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.85, 6), leafMat);
+        leaf.rotation.x = 0.45 * Math.cos(l * 0.8);
+        leaf.rotation.z = 0.45 * Math.sin(l * 0.8);
+        leaf.position.set(px + Math.cos(l) * 0.09, 0.82, 4.5 + Math.sin(l) * 0.09);
+        scene.add(leaf);
+      }
+    });
   }
 
-  function triggerGoogleTranslate(langCode) {
-    // Set the language selection programmatically in the google translate widget
-    const translateDropdown = document.querySelector(".goog-te-combo");
-    if (translateDropdown) {
-        translateDropdown.value = langCode;
-        translateDropdown.dispatchEvent(new Event('change'));
+  function updateQueueBoardCanvas() {
+    if (!tokenDisplayCanvas) return;
+    const ctx = tokenDisplayCanvas.getContext('2d');
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(0, 0, 512, 192);
+
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(4, 4, 504, 184);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 22px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('NOW SERVING TOKEN', 165, 45);
+    ctx.fillText('POD STATION', 395, 45);
+
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 88px "JetBrains Mono", monospace';
+    ctx.fillText(`A-${currentTokenNumber}`, 165, 145);
+
+    ctx.fillStyle = '#10b981';
+    ctx.fillText(`0${(currentTokenNumber % 4) + 1}`, 395, 145);
+
+    if (tokenDisplayTexture) tokenDisplayTexture.needsUpdate = true;
+  }
+
+  /* -------------------------------------------------------------
+     Realistic 1:1 Scale Articulated Human Citizens (1.62m - 1.75m)
+  ------------------------------------------------------------- */
+  function createHumanPerson(config) {
+    const { x, z, rotY, height = 1.70, skinColor = 0xc68642, shirtColor = 0x2563eb, pantsColor = 0x1e293b, pose = 'standing' } = config;
+    const person = new THREE.Group();
+    person.position.set(x, 0, z);
+    person.rotation.y = rotY;
+    const scale = height / 1.70;
+    person.scale.set(scale, scale, scale);
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.55 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.65 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.7 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8 });
+
+    if (pose === 'sitting') {
+      const hipY = 0.50;
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.52, 16), shirtMat);
+      torso.position.set(0, hipY + 0.28, 0);
+      torso.castShadow = true;
+      person.add(torso);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 18, 18), skinMat);
+      head.position.set(0, hipY + 0.66, 0.02);
+      head.castShadow = true;
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.114, 18, 18, 0, Math.PI * 2, 0, Math.PI * 0.58), hairMat);
+      hair.position.set(0, hipY + 0.67, 0.01);
+      person.add(head, hair);
+
+      [-0.085, 0.085].forEach(lx => {
+        const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.058, 0.40, 12), pantsMat);
+        thigh.rotation.x = Math.PI / 2;
+        thigh.position.set(lx, hipY + 0.02, 0.18);
+        const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.44, 12), pantsMat);
+        shin.position.set(lx, 0.26, 0.36);
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.06, 0.20), shoeMat);
+        shoe.position.set(lx, 0.03, 0.40);
+        person.add(thigh, shin, shoe);
+      });
+
+      [-0.18, 0.18].forEach((ax, idx) => {
+        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.036, 0.44, 12), shirtMat);
+        arm.rotation.x = -0.55;
+        arm.rotation.z = idx === 0 ? -0.15 : 0.15;
+        arm.position.set(ax * 0.85, hipY + 0.26, 0.14);
+        person.add(arm);
+      });
+
+      const phone = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.01, 0.13), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+      phone.position.set(0, hipY + 0.12, 0.28);
+      person.add(phone);
+
+      person.userData = { pose, phase: Math.random() * Math.PI * 2 };
+      return person;
     }
-  }
 
-  function executeSelection() {
-    if (!selectedAction) return;
-    
-    if (currentScreen === 'screen-02' && selectedLanguageCode) {
-        triggerGoogleTranslate(selectedLanguageCode);
-    }
-    
-    if (selectedAction.startsWith('screen-')) {
-      navigateTo(selectedAction);
-    } else if (selectedAction.startsWith('auth:')) {
-      requireAuth(selectedAction.split(':')[1]);
-    } else if (selectedAction.startsWith('func:')) {
-      const func = selectedAction.split(':')[1];
-      window[func]();
-    }
-  }
+    // Standing / Interacting / Walking Pose
+    const legs = [];
+    [-0.09, 0.09].forEach((lx, lIdx) => {
+      const legGroup = new THREE.Group();
+      legGroup.position.set(lx, 0.86, 0);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.052, 0.86, 14), pantsMat);
+      leg.position.set(0, -0.41, 0);
+      leg.castShadow = true;
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.065, 0.22), shoeMat);
+      shoe.position.set(0, -0.83, 0.04);
+      legGroup.add(leg, shoe);
+      person.add(legGroup);
+      legs.push(legGroup);
+    });
 
-  function setUpdateMode(mode) {
-    currentUpdateMode = mode;
-    document.getElementById('dynamic-form-name').classList.add('hidden');
-    document.getElementById('dynamic-form-dob').classList.add('hidden');
-    document.getElementById('dynamic-form-gender').classList.add('hidden');
-    document.getElementById('dynamic-form-' + mode).classList.remove('hidden');
-    
-    // Reset gender selection
-    selectedGender = '';
-    const btnContinue = document.getElementById('btn-demo-continue');
-    btnContinue.disabled = (mode === 'gender');
-  }
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.135, 0.56, 18), shirtMat);
+    torso.position.set(0, 1.14, 0);
+    torso.castShadow = true;
+    person.add(torso);
 
-  function selectGender(btn, gender) {
-    selectCard(btn, 'gender');
-    selectedGender = gender;
-    document.getElementById('btn-demo-continue').disabled = false;
-  }
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.058, 0.09, 12), skinMat);
+    neck.position.set(0, 1.45, 0);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.112, 20, 20), skinMat);
+    head.position.set(0, 1.56, 0.01);
+    head.castShadow = true;
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.116, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.58), hairMat);
+    hair.position.set(0, 1.57, 0.0);
+    person.add(neck, head, hair);
 
-  // --- Document Selection Logic ---
-  function checkDocSelection(selectId, btnId) {
-    const selectEl = document.getElementById(selectId);
-    const btnEl = document.getElementById(btnId);
-    if (selectEl && btnEl) {
-      btnEl.disabled = (selectEl.value === "");
-    }
-  }
+    const leftUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.04, 0.52, 12), shirtMat);
+    leftUpperArm.position.set(-0.20, 1.13, 0);
+    leftUpperArm.rotation.z = 0.08;
+    const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), skinMat);
+    leftHand.position.set(-0.22, 0.86, 0.02);
+    person.add(leftUpperArm, leftHand);
 
-  // --- 3-Step Authentication Logic ---
-
-  function requireAuth(nextScreen) {
-    authNextScreen = nextScreen;
-    navigateTo('screen-07');
-  }
-
-  function resetAuth() {
-    authStep = 1;
-    authInput = '';
-    authPhone = '';
-    updateAuthUI();
-  }
-
-  function typePin(key) {
-    const maxLen = (authStep === 2) ? 10 : 4;
-    
-    if (key === 'clear') {
-      authInput = '';
-    } else if (key === 'del') {
-      authInput = authInput.slice(0, -1);
-    } else if (authInput.length < maxLen) {
-      authInput += key;
-    }
-    updateAuthUI();
-  }
-
-  function updateAuthUI() {
-    const title = document.getElementById('auth-title');
-    const subtitle = document.getElementById('auth-subtitle');
-    const container = document.getElementById('auth-input-container');
-    const authBtn = document.getElementById('auth-btn');
-
-    // Update Text and Display Formats based on current step
-    if (authStep === 1) {
-      title.innerText = "Verify your identity";
-      subtitle.innerText = "Enter the last 4 digits of your Aadhaar Number.";
-      container.innerHTML = `
-        <div class="text-3xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">XXXX</div>
-        <div class="text-3xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">XXXX</div>
-        <div class="text-4xl font-bold text-[#6d6ca2] tracking-widest px-6 min-w-[150px] text-center">${authInput.padEnd(4, '_')}</div>
-      `;
-    } else if (authStep === 2) {
-      title.innerText = "Enter Mobile Number";
-      subtitle.innerText = "Enter your 10-digit registered mobile number.";
-      container.innerHTML = `
-        <div class="text-4xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">+91</div>
-        <div class="text-4xl font-bold text-[#6d6ca2] tracking-widest px-6 min-w-[280px] text-center">${authInput.padEnd(10, '_')}</div>
-      `;
-    } else if (authStep === 3) {
-      title.innerText = "Enter OTP";
-      subtitle.innerText = "Enter the 4-digit OTP sent to +91 " + authPhone + ".";
-      const otpDisplay = authInput.padEnd(4, '_').split('').join(' ');
-      container.innerHTML = `
-        <div class="text-5xl font-bold text-[#6d6ca2] tracking-widest px-8 min-w-[200px] text-center">${otpDisplay}</div>
-      `;
-    }
-
-    // Validation for continue button
-    let isValid = false;
-    if (authStep === 1 && authInput.length === 4) isValid = true;
-    if (authStep === 2 && authInput.length === 10) isValid = true;
-    if (authStep === 3 && authInput.length === 4) isValid = true;
-
-    if (isValid) {
-      authBtn.disabled = false;
-      authBtn.classList.remove('bg-slate-300', 'text-slate-500');
-      authBtn.classList.add('bg-[#6d6ca2]', 'text-white', 'shadow-md');
+    const rightArmGroup = new THREE.Group();
+    rightArmGroup.position.set(0.20, 1.36, 0);
+    if (pose === 'touching') {
+      const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.042, 0.28, 12), shirtMat);
+      upperArm.rotation.x = -0.65;
+      upperArm.position.set(0, -0.11, 0.09);
+      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.032, 0.27, 12), skinMat);
+      forearm.rotation.x = -1.25;
+      forearm.position.set(-0.04, -0.19, 0.29);
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.038, 10, 10), skinMat);
+      hand.position.set(-0.06, -0.15, 0.42);
+      rightArmGroup.add(upperArm, forearm, hand);
     } else {
-      authBtn.disabled = true;
-      authBtn.classList.add('bg-slate-300', 'text-slate-500');
-      authBtn.classList.remove('bg-[#6d6ca2]', 'text-white', 'shadow-md');
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.04, 0.52, 12), shirtMat);
+      arm.position.set(0, -0.24, 0);
+      arm.rotation.z = -0.08;
+      rightArmGroup.add(arm);
     }
+    person.add(rightArmGroup);
+
+    person.userData = { 
+      rightArmGroup, 
+      leftUpperArm,
+      arms: [leftUpperArm, rightArmGroup],
+      legs: legs,
+      pose, 
+      speed: config.speed || 0.8,
+      path: config.path || null,
+      targetIndex: 0,
+      phase: Math.random() * Math.PI * 2 
+    };
+    return person;
   }
 
-  function submitAuth() {
-    if (authStep === 1 && authInput.length === 4) {
-      authStep = 2;
-      authInput = '';
-      updateAuthUI();
-    } else if (authStep === 2 && authInput.length === 10) {
-      authPhone = authInput;
-      authStep = 3;
-      authInput = '';
-      updateAuthUI();
-    } else if (authStep === 3 && authInput.length === 4) {
-      // Finished all 3 steps successfully!
-      navigateTo(authNextScreen);
-    }
+  function buildHumanCharacters() {
+    // 4 Kiosks: X = [-4.6, -1.6, 1.6, 4.6] at Z = -0.6
+    // Humans stand at Z ~ 0.22 facing kiosk (rotY = Math.PI)
+    // 3 Kiosks actively occupied by citizens, 1 kiosk (Pod 02: x = -1.6) completely empty for the user!
+
+    // Kiosk 1 Occupant: Citizen updating address & interacting with screen
+    const user1 = createHumanPerson({
+      x: -4.6,
+      z: 0.16,
+      rotY: Math.PI,
+      height: 1.72,
+      skinColor: 0xc68642,
+      shirtColor: 0x0284c7, // Indian postal blue
+      pantsColor: 0x1e293b,
+      pose: 'touching',
+      speed: 0
+    });
+    scene.add(user1);
+    humanCharacters.push(user1);
+
+    // KIOSK 2 (x = -1.6) IS LEFT EMPTY FOR THE USER TO WALK UP AND INTERACT!
+
+    // Kiosk 3 Occupant: Citizen performing biometric fingerprint authentication
+    const user3 = createHumanPerson({
+      x: 1.6,
+      z: 0.18,
+      rotY: Math.PI,
+      height: 1.66,
+      skinColor: 0xd99b66,
+      shirtColor: 0x059669, // Emerald green kurta
+      pantsColor: 0xf1f5f9,
+      pose: 'touching',
+      speed: 0
+    });
+    scene.add(user3);
+    humanCharacters.push(user3);
+
+    // Kiosk 4 Occupant: Senior citizen completing Aadhaar PVC reprint
+    const user4 = createHumanPerson({
+      x: 4.6,
+      z: 0.17,
+      rotY: Math.PI,
+      height: 1.68,
+      skinColor: 0xb87333,
+      shirtColor: 0xd97706, // Amber/Saffron shirt
+      pantsColor: 0x334155,
+      pose: 'touching',
+      speed: 0
+    });
+    scene.add(user4);
+    humanCharacters.push(user4);
+
+    // Waiting Bench Citizen checking mobile phone
+    const waiter = createHumanPerson({
+      x: -5.2,
+      z: 2.5,
+      rotY: Math.PI / 2,
+      height: 1.74,
+      skinColor: 0xb87333,
+      shirtColor: 0x475569,
+      pantsColor: 0x0f172a,
+      pose: 'sitting',
+      speed: 0
+    });
+    scene.add(waiter);
+    humanCharacters.push(waiter);
+
+    // UIDAI Vestibule Security / Helpdesk Officer standing at side
+    const assistant = createHumanPerson({
+      x: 5.5,
+      z: 2.4,
+      rotY: -Math.PI * 0.72,
+      height: 1.78,
+      skinColor: 0xc68642,
+      shirtColor: 0x1e3a8a, // Uniform navy blue
+      pantsColor: 0x0f172a,
+      pose: 'standing',
+      speed: 0
+    });
+    scene.add(assistant);
+    humanCharacters.push(assistant);
+
+    // Dynamic Walking Citizen 1: Walking across vestibule from entrance to seating area
+    const walker1 = createHumanPerson({
+      x: -2.0,
+      z: 4.8,
+      rotY: 0,
+      height: 1.70,
+      skinColor: 0xc68642,
+      shirtColor: 0x9333ea, // Purple shirt
+      pantsColor: 0x1e293b,
+      pose: 'walking',
+      speed: 0.85,
+      path: [
+        { x: -1.2, z: 4.6 },
+        { x: -3.8, z: 2.8 },
+        { x: -4.2, z: 1.8 },
+        { x: -2.5, z: 2.8 },
+        { x: -0.5, z: 4.8 }
+      ]
+    });
+    scene.add(walker1);
+    humanCharacters.push(walker1);
+
+    // Dynamic Walking Citizen 2: Walking after service completion toward the sliding glass doors
+    const walker2 = createHumanPerson({
+      x: 3.2,
+      z: 1.6,
+      rotY: 0,
+      height: 1.65,
+      skinColor: 0xd99b66,
+      shirtColor: 0xe11d48, // Rose red top
+      pantsColor: 0x0f172a,
+      pose: 'walking',
+      speed: 0.72,
+      path: [
+        { x: 3.4, z: 1.5 },
+        { x: 1.8, z: 3.2 },
+        { x: 0.0, z: 5.4 },
+        { x: 2.2, z: 3.2 }
+      ]
+    });
+    scene.add(walker2);
+    humanCharacters.push(walker2);
   }
 
-  // --- End 3-Step Authentication Logic ---
+  /* -------------------------------------------------------------
+     Aadhaar Multi-Pod Kiosk Hardware Assembly ("2. LEAN TOWER")
+     - Overall Height: 1800 mm (1.80 m) | Width: 500 mm (0.50 m) | Depth: 650 mm (0.65 m)
+     - Slim vertical tower form with protruding angled document shelf at 900 mm
+     - Camera 1600mm, Iris 1550mm, Screen 1400mm, Fingerprint 1050mm, Doc Scanner 900mm
+  ------------------------------------------------------------- */
+  function createAadhaarHeaderTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 256, 128);
 
-  let pendingTitle = '';
-  let pendingSubtitle = '';
+    ctx.fillStyle = '#f59e0b';
+    for (let i = -3; i <= 3; i++) {
+      const ang = -Math.PI / 2 + i * 0.34;
+      const rx = 128 + Math.cos(ang) * 44;
+      const ry = 66 + Math.sin(ang) * 44;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-  function confirmAction(title, subtitle, requiresPayment = false) {
-    pendingTitle = title;
-    pendingSubtitle = subtitle;
-    
-    if (requiresPayment) {
-        navigateTo('screen-21');
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 4;
+    [14, 22, 30].forEach(r => {
+      ctx.beginPath();
+      ctx.arc(128, 68, r, Math.PI, 0);
+      ctx.stroke();
+    });
+
+    ctx.fillStyle = '#dc2626';
+    ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('AADHAAR', 128, 108);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function buildKioskStations() {
+    const podXPositions = [-4.6, -1.6, 1.6, 4.6];
+
+    // Load and parse materials from Kiosk.mtl using MTLLoader
+    let materialsCreator = null;
+    const mtlLoader = new THREE.MTLLoader();
+    if (window.KIOSK_MTL_TEXT) {
+      try {
+        materialsCreator = mtlLoader.parse(window.KIOSK_MTL_TEXT);
+        materialsCreator.preload();
+      } catch (e) {
+        console.warn("MTL parse warning:", e);
+      }
+    }
+
+    // Kiosk Body Material: #ffe0d1 (Warm peach cream)
+    const absWhiteMaterial = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(0xffe0d1),
+      roughness: 0.28,
+      metalness: 0.08,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.2
+    });
+
+    const glassBlueMaterial = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(0.423529, 0.768627, 0.854902),
+      roughness: 0.1,
+      metalness: 0.15,
+      transmission: 0.65,
+      transparent: true,
+      opacity: 0.88,
+      ior: 1.52,
+      reflectivity: 0.9
+    });
+
+    const kioskDarkAccentMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      metalness: 0.45,
+      roughness: 0.3
+    });
+
+    // Parse Kiosk.obj with MTLLoader materials bound
+    const objLoader = new THREE.OBJLoader();
+    if (materialsCreator) {
+      objLoader.setMaterials(materialsCreator);
+    }
+
+    let kioskBaseModel = null;
+    if (window.KIOSK_OBJ_TEXT) {
+      try {
+        kioskBaseModel = objLoader.parse(window.KIOSK_OBJ_TEXT);
+      } catch (err) {
+        console.error("Error parsing KIOSK_OBJ_TEXT:", err);
+      }
+    }
+
+    podXPositions.forEach((xPos, idx) => {
+      const podGroup = new THREE.Group();
+      podGroup.position.set(xPos, 0, -0.6);
+      podGroup.userData = { podGroup: true, podIndex: idx + 1 };
+
+      // 1. Overhead Crimson ATM Canopy with Illuminated Ring
+      const canopyGroup = new THREE.Group();
+      canopyGroup.position.set(0, 3.1, 0);
+
+      const canopyGeo = new THREE.CylinderGeometry(0.85, 0.85, 0.42, 24, 1, false, 0, Math.PI);
+      const canopyMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.3, metalness: 0.2 });
+      const canopyMesh = new THREE.Mesh(canopyGeo, canopyMat);
+      canopyMesh.rotation.y = -Math.PI / 2;
+      canopyGroup.add(canopyMesh);
+
+      const ringGeo = new THREE.TorusGeometry(0.86, 0.025, 12, 32, Math.PI);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 2;
+      ringMesh.rotation.z = -Math.PI / 2;
+      ringMesh.position.y = -0.21;
+      canopyGroup.add(ringMesh);
+
+      const bladeGeo = new THREE.BoxGeometry(0.04, 0.5, 0.35);
+      const bladeMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.2 });
+      const bladeMesh = new THREE.Mesh(bladeGeo, bladeMat);
+      bladeMesh.position.set(0.72, -0.1, 0.2);
+      canopyGroup.add(bladeMesh);
+
+      podGroup.add(canopyGroup);
+
+      // 2. Kiosk.obj 3D Model Instance
+      if (kioskBaseModel) {
+        const kioskClone = kioskBaseModel.clone(true);
+        // Correct orientation:
+        // In OBJ, front screen normal has negative Y (-0.82) and height is Z [0, 170cm].
+        // rotation.x = -Math.PI/2 maps Z_obj -> +Y (Up) and -Y_obj -> +Z (Facing forward into the room towards the user)
+        kioskClone.rotation.x = -Math.PI / 2;
+        kioskClone.rotation.y = 0;
+        kioskClone.rotation.z = 0;
+        kioskClone.scale.set(0.01, 0.01, 0.01);
+        kioskClone.position.set(0, 0, 0);
+
+        kioskClone.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+
+            // Handle both single material and MultiMaterial array created by OBJLoader
+            if (Array.isArray(child.material)) {
+              child.material = child.material.map(m => {
+                const name = (m && m.name) ? m.name : '';
+                return (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
+              });
+            } else if (child.material) {
+              const name = child.material.name || '';
+              child.material = (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
+            } else {
+              child.material = absWhiteMaterial;
+            }
+          }
+        });
+
+        podGroup.add(kioskClone);
+      }
+
+      // Base Pedestal Plinth
+      const plinth = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.42, 0.46, 0.04, 32),
+        kioskDarkAccentMaterial
+      );
+      plinth.position.set(0, 0.02, 0);
+      plinth.receiveShadow = true;
+      podGroup.add(plinth);
+
+      // 3. Interactive Touchscreen directly on the Glass face of Kiosk.obj
+      // In Kiosk.obj, the forward glass face spans:
+      // Width: 0.52m (X: -0.255 to 0.265, center = 0.005)
+      // Height: 0.46m (Y: 1.15 to 1.61, center = 1.385)
+      // Depth Z: 0.038 (slight tilt of -5.74 deg around X)
+      const screenObj = createKioskScreenTexture(idx + 1, 0);
+      const screenGeo = new THREE.PlaneGeometry(0.51, 0.44);
+      const screenMat = new THREE.MeshBasicMaterial({ 
+        map: screenObj.texture,
+        transparent: false,
+        side: THREE.DoubleSide
+      });
+      const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+      // Mapped directly onto the glass panel face:
+      screenMesh.position.set(0.005, 1.385, 0.040);
+      screenMesh.rotation.x = -0.100; // -5.74 degrees tilt matching glass normal
+      screenMesh.userData = {
+        podIndex: idx + 1,
+        activeStep: 0,
+        screenObj: screenObj
+      };
+      podGroup.add(screenMesh);
+      interactiveScreens.push(screenMesh);
+
+      // Glass Edge Protective Bezel Frame flush with glass boundary
+      const bezelGeo = new THREE.BoxGeometry(0.53, 0.46, 0.008);
+      const bezelMesh = new THREE.Mesh(bezelGeo, kioskDarkAccentMaterial);
+      bezelMesh.position.set(0.005, 1.385, 0.034);
+      bezelMesh.rotation.x = -0.100;
+      podGroup.add(bezelMesh);
+
+      // Ambient Biometric Scanner Glow LED strip underneath screen
+      const scannerGlow = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.38, 0.018),
+        new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide })
+      );
+      scannerGlow.position.set(0.005, 0.94, 0.145);
+      scannerGlow.rotation.x = -0.55;
+      podGroup.add(scannerGlow);
+
+      scene.add(podGroup);
+      kioskGroupList.push(podGroup);
+    });
+  }
+
+  /* -------------------------------------------------------------
+     Input Handling & Physics Movement
+  ------------------------------------------------------------- */
+  function setupEventHandlers() {
+    window.addEventListener('resize', onWindowResize);
+
+    window.addEventListener('keydown', (e) => handleKey(e.code, true));
+    window.addEventListener('keyup', (e) => handleKey(e.code, false));
+
+    function handleKey(code, isPressed) {
+      switch (code) {
+        case 'KeyW':
+        case 'ArrowUp':
+          player.keys.forward = isPressed;
+          toggleKeyUI('key-w', isPressed);
+          break;
+        case 'KeyS':
+        case 'ArrowDown':
+          player.keys.backward = isPressed;
+          toggleKeyUI('key-s', isPressed);
+          break;
+        case 'KeyA':
+        case 'ArrowLeft':
+          player.keys.left = isPressed;
+          toggleKeyUI('key-a', isPressed);
+          break;
+        case 'KeyD':
+        case 'ArrowRight':
+          player.keys.right = isPressed;
+          toggleKeyUI('key-d', isPressed);
+          break;
+        case 'ShiftLeft':
+        case 'ShiftRight':
+          player.keys.sprint = isPressed;
+          break;
+      }
+    }
+
+    function toggleKeyUI(id, active) {
+      const el = document.getElementById(id);
+      if (el) {
+        active ? el.classList.add('active') : el.classList.remove('active');
+      }
+    }
+
+    const bindTouch = (btnId, keyName) => {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); player.keys[keyName] = true; });
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); player.keys[keyName] = false; });
+      btn.addEventListener('mousedown', () => { player.keys[keyName] = true; });
+      btn.addEventListener('mouseup', () => { player.keys[keyName] = false; });
+    };
+
+    bindTouch('touch-up', 'forward');
+    bindTouch('touch-down', 'backward');
+    bindTouch('touch-left', 'left');
+    bindTouch('touch-right', 'right');
+
+    const raycaster = new THREE.Raycaster();
+    const mouseCoord = new THREE.Vector2();
+
+    let dragDist = 0;
+    container.addEventListener('pointerdown', (e) => {
+      dragDist = 0;
+      if (isWalkMode) {
+        player.isDragging = true;
+        player.dragStart.x = e.clientX;
+        player.dragStart.y = e.clientY;
+      }
+    });
+
+    container.addEventListener('pointermove', (e) => {
+      if (isWalkMode && player.isDragging) {
+        dragDist += Math.hypot(e.clientX - player.dragStart.x, e.clientY - player.dragStart.y);
+      }
+    });
+
+    container.addEventListener('pointerup', (e) => {
+      // If user clicked or tapped without heavy dragging, check for screen hit
+      if (dragDist < 12) {
+        mouseCoord.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouseCoord.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouseCoord, camera);
+
+        // Raycast against interactive screens as well as pod groups
+        const intersects = raycaster.intersectObjects(interactiveScreens, true);
+        if (intersects.length > 0) {
+          onScreenClicked(intersects[0].object);
+          player.isDragging = false;
+          return;
+        }
+
+        // Also check if user clicked anywhere on the kiosk mesh
+        const podIntersects = raycaster.intersectObjects(kioskGroupList, true);
+        if (podIntersects.length > 0) {
+          // Find corresponding screenMesh in this kiosk pod
+          let obj = podIntersects[0].object;
+          while (obj && !obj.userData.podGroup && obj.parent && obj.parent !== scene) {
+            obj = obj.parent;
+          }
+          const matchedScreen = interactiveScreens.find(s => s.userData.podIndex === (obj.userData.podIndex || 1)) || interactiveScreens[0];
+          onScreenClicked(matchedScreen);
+          player.isDragging = false;
+          return;
+        }
+      }
+      player.isDragging = false;
+    });
+
+    window.addEventListener('mouseup', () => {
+      player.isDragging = false;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isWalkMode && player.isDragging) {
+        const deltaX = e.clientX - player.dragStart.x;
+        const deltaY = e.clientY - player.dragStart.y;
+        player.dragStart.x = e.clientX;
+        player.dragStart.y = e.clientY;
+
+        const sensitivity = 0.0035;
+        player.targetYaw -= deltaX * sensitivity;
+        player.targetPitch -= deltaY * sensitivity;
+        player.targetPitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, player.targetPitch));
+      }
+    });
+
+    let touchLookStart = { x: 0, y: 0 };
+    container.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        touchLookStart.x = e.touches[0].clientX;
+        touchLookStart.y = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && isWalkMode) {
+        const deltaX = e.touches[0].clientX - touchLookStart.x;
+        const deltaY = e.touches[0].clientY - touchLookStart.y;
+        touchLookStart.x = e.touches[0].clientX;
+        touchLookStart.y = e.touches[0].clientY;
+
+        const sensitivity = 0.004;
+        player.targetYaw -= deltaX * sensitivity;
+        player.targetPitch -= deltaY * sensitivity;
+        player.targetPitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, player.targetPitch));
+      }
+    }, { passive: true });
+
+    const toggleWalkBtn = document.getElementById('btn-toggle-walk');
+    toggleWalkBtn.addEventListener('click', () => {
+      isWalkMode = !isWalkMode;
+      orbitControls.enabled = !isWalkMode;
+      const walkText = document.getElementById('walk-mode-text');
+      const crosshair = document.getElementById('crosshair');
+
+      if (isWalkMode) {
+        walkText.textContent = 'Walk Inside (Active)';
+        toggleWalkBtn.classList.replace('bg-slate-800', 'bg-emerald-600');
+        crosshair.classList.remove('opacity-0');
+        player.position.copy(camera.position);
+        player.position.y = 1.65;
+        player.targetYaw = camera.rotation.y;
+        player.yaw = camera.rotation.y;
+      } else {
+        walkText.textContent = 'Orbit View Mode';
+        toggleWalkBtn.classList.replace('bg-emerald-600', 'bg-slate-800');
+        crosshair.classList.add('opacity-0');
+        orbitControls.target.set(0, 1.4, 0);
+      }
+    });
+
+    document.querySelectorAll('.cam-preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const camKey = e.currentTarget.getAttribute('data-cam');
+        setCameraPreset(camKey);
+      });
+    });
+
+    const doorBtn = document.getElementById('btn-door-toggle');
+    doorBtn.addEventListener('click', () => {
+      if (doorForcedMode === 'auto') {
+        doorForcedMode = 'open';
+        document.getElementById('door-btn-text').textContent = 'Door: Forced Open';
+      } else if (doorForcedMode === 'open') {
+        doorForcedMode = 'closed';
+        document.getElementById('door-btn-text').textContent = 'Door: Forced Closed';
+      } else {
+        doorForcedMode = 'auto';
+        document.getElementById('door-btn-text').textContent = 'Door: Auto Sensor';
+      }
+      AudioEngine.playBeep(600, 0.05);
+    });
+
+    document.getElementById('btn-light-toggle').addEventListener('click', () => {
+      isNightLighting = !isNightLighting;
+      ambientLight.intensity = isNightLighting ? 0.58 : 0.92;
+      mainSpotlights.forEach(spot => spot.intensity = isNightLighting ? 1.15 : 0.72);
+      AudioEngine.playBeep(520, 0.05);
+    });
+
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+  }
+
+  /* -------------------------------------------------------------
+     Screen Click & Interactive Modal
+  ------------------------------------------------------------- */
+  function onScreenClicked(mesh) {
+    AudioEngine.playBeep(980, 0.08);
+    currentTokenNumber++;
+    updateQueueBoardCanvas();
+
+    mesh.userData.activeStep = (mesh.userData.activeStep + 1) % 3;
+    const newScreenObj = createKioskScreenTexture(mesh.userData.podIndex, mesh.userData.activeStep);
+    mesh.material.map = newScreenObj.texture;
+    mesh.material.needsUpdate = true;
+    mesh.userData.screenObj = newScreenObj;
+
+    openKioskModal(mesh.userData.podIndex, newScreenObj.currentStep);
+  }
+
+  function openKioskModal(podId, stepData) {
+    const modal = document.getElementById('kiosk-modal');
+    document.getElementById('modal-pod-id').textContent = `TERMINAL POD 0${podId} • ONLINE`;
+    document.getElementById('modal-title').textContent = stepData.title;
+
+    const contentDiv = document.getElementById('modal-screen-content');
+    contentDiv.innerHTML = `
+      <div>
+        <p class="text-xs text-slate-400 mb-3">${stepData.sub}</p>
+        <div class="space-y-2">
+          ${stepData.cards.map((c, i) => `
+            <div class="p-3 rounded-xl ${i === 0 ? 'bg-amber-500/20 border border-amber-500/40 text-amber-200' : 'bg-slate-900 border border-white/10 text-slate-300'} flex items-center justify-between text-xs font-semibold">
+              <span>${c}</span>
+              <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+        <span><i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i>256-Bit Encrypted Session</span>
+        <span>Time remaining: 01:58</span>
+      </div>
+    `;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeModal() {
+    const modal = document.getElementById('kiosk-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  /* -------------------------------------------------------------
+     Camera Preset Positioning
+  ------------------------------------------------------------- */
+  function setCameraPreset(key) {
+    isWalkMode = false;
+    orbitControls.enabled = true;
+    document.getElementById('walk-mode-text').textContent = 'Orbit View Mode';
+    document.getElementById('btn-toggle-walk').classList.replace('bg-emerald-600', 'bg-slate-800');
+    document.getElementById('crosshair').classList.add('opacity-0');
+
+    let targetPos, targetLook;
+    if (key === 'entrance') {
+      targetPos = new THREE.Vector3(0, 1.65, 7.6);
+      targetLook = new THREE.Vector3(0, 1.65, 3.0);
+    } else if (key === 'pod1') {
+      targetPos = new THREE.Vector3(-4.6, 1.4, 0.95);
+      targetLook = new THREE.Vector3(-4.6, 1.35, -0.6);
+    } else if (key === 'top') {
+      targetPos = new THREE.Vector3(0, 8.5, 1.5);
+      targetLook = new THREE.Vector3(0, 0, 1.5);
     } else {
-        document.getElementById('confirm-title').innerText = title;
-        document.getElementById('confirm-subtitle').innerText = subtitle;
-        navigateTo('screen-19');
+      targetPos = new THREE.Vector3(0, 2.2, 5.0);
+      targetLook = new THREE.Vector3(0, 1.4, 0);
+    }
+
+    new TWEEN.Tween(camera.position)
+      .to(targetPos, 900)
+      .easing(TWEEN.Easing.Cubic.Out)
+      .start();
+
+    new TWEEN.Tween(orbitControls.target)
+      .to(targetLook, 900)
+      .easing(TWEEN.Easing.Cubic.Out)
+      .start();
+  }
+
+  /* -------------------------------------------------------------
+     WebXR VR Setup
+  ------------------------------------------------------------- */
+  function setupVR() {
+    if ('xr' in navigator) {
+      navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+        if (supported) {
+          const vrBtn = document.createElement('button');
+          vrBtn.id = 'VRButton';
+          vrBtn.innerHTML = '<i class="fa-solid fa-vr-cardboard mr-2"></i>Enter VR Mode';
+          vrBtn.addEventListener('click', () => {
+            navigator.xr.requestSession('immersive-vr', {
+              optionalFeatures: ['local-floor', 'bounded-floor']
+            }).then((session) => {
+              renderer.xr.setSession(session);
+            });
+          });
+          document.body.appendChild(vrBtn);
+        }
+      });
     }
   }
 
-  function processPayment(method) {
-    document.getElementById('payment-selection-view').classList.add('hidden');
-    document.getElementById('payment-processing-view').classList.remove('hidden');
-    document.getElementById('payment-processing-view').classList.add('flex');
-    
-    // Simulate API processing delay
-    setTimeout(() => {
-        document.getElementById('confirm-title').innerText = pendingTitle;
-        document.getElementById('confirm-subtitle').innerText = pendingSubtitle;
-        navigateTo('screen-19');
-        
-        // Restore for future visits seamlessly in the background
-        setTimeout(() => {
-            document.getElementById('payment-processing-view').classList.add('hidden');
-            document.getElementById('payment-processing-view').classList.remove('flex');
-            document.getElementById('payment-selection-view').classList.remove('hidden');
-        }, 1000);
-    }, 2000);
-  }
+  /* -------------------------------------------------------------
+     Continuous Physics Update & Strafe Calculation
+  ------------------------------------------------------------- */
+  function updatePhysics(delta) {
+    if (!isWalkMode) return;
 
-  function showStatusTimeline() {
-    navigateTo('screen-15');
-  }
+    player.yaw += (player.targetYaw - player.yaw) * 0.25;
+    player.pitch += (player.targetPitch - player.pitch) * 0.25;
 
-  function generateVID() {
-    document.getElementById('vid-result').classList.remove('hidden');
-    document.getElementById('vid-gen-btn').classList.add('hidden');
-    document.getElementById('vid-finish-btn').classList.remove('hidden');
-  }
+    camera.rotation.y = player.yaw;
+    camera.rotation.x = player.pitch;
 
-  // --- Upload Modal Logic ---
-  
-  function openUploadModal(btnElement) {
-    activeUploadButton = btnElement;
-    document.getElementById('upload-modal').classList.remove('hidden');
-  }
+    const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
+    const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
 
-  function closeUploadModal() {
-    document.getElementById('upload-modal').classList.add('hidden');
-    activeUploadButton = null;
-  }
+    const moveDir = new THREE.Vector3(0, 0, 0);
 
-  function simulateUpload(method) {
-    if (activeUploadButton) {
-      // Visually update the original button to show success
-      activeUploadButton.innerHTML = `
-          <div class="flex items-center justify-center gap-3">
-              <span class="text-3xl notranslate">✓</span>
-              <span class="text-lg font-bold">Attached via ${method}</span>
-          </div>
-      `;
-      // Swap out the dashed grey border styles for solid emerald success styles
-      activeUploadButton.classList.remove('border-dashed', 'border-slate-300', 'text-slate-500', 'hover:bg-slate-100', 'hover:bg-slate-50');
-      activeUploadButton.classList.add('border-solid', 'border-emerald-500', 'bg-emerald-50', 'text-emerald-700');
+    if (player.keys.forward) moveDir.add(forward);
+    if (player.keys.backward) moveDir.sub(forward);
+    if (player.keys.left) moveDir.sub(right);
+    if (player.keys.right) moveDir.add(right);
+
+    if (moveDir.lengthSq() > 0) {
+      moveDir.normalize();
+      const currentSpeed = player.speed * (player.keys.sprint ? player.sprintMultiplier : 1.0);
+      player.velocity.copy(moveDir.multiplyScalar(currentSpeed));
+    } else {
+      player.velocity.lerp(new THREE.Vector3(0, 0, 0), 0.18);
     }
-    closeUploadModal();
+
+    player.position.addScaledVector(player.velocity, delta);
+
+    // Boundary containment
+    player.position.x = Math.max(-7.3, Math.min(7.3, player.position.x));
+    player.position.z = Math.max(0.15, Math.min(7.8, player.position.z));
+    player.position.y = 1.65;
+
+    camera.position.copy(player.position);
   }
 
-  let countdownTimer;
-  function startCountdown() {
-    let count = 10;
-    document.getElementById('countdown').innerText = count;
-    clearInterval(countdownTimer);
-    countdownTimer = setInterval(() => {
-      count--;
-      document.getElementById('countdown').innerText = count;
-      if (count <= 0) {
-        clearInterval(countdownTimer);
-        navigateTo('screen-01');
-      }
-    }, 1000);
-  }
+  /* -------------------------------------------------------------
+     Door Motion Sensor & Sliding Animation
+  ------------------------------------------------------------- */
+  function updateAutomaticDoors(delta) {
+    if (!doorLeftMesh || !doorRightMesh) return;
 
-  // --- Attract Screen Language Rotation ---
-  const attractTexts = [
-    "TAP TO BEGIN",
-    "शुरू करने के लिए टैप करें",
-    "सुरू करण्यासाठी टॅप करा",
-    "શરૂ કરવા માટે ટેપ કરો",
-    "শুরু করতে আলতো চাপুন",
-    "தொடங்க தட்டவும்"
-  ];
-  let currentAttractIdx = 0;
+    const frontWallZ = 5.6;
+    let shouldOpen = false;
 
-  setInterval(() => {
-    if (currentScreen === 'screen-01') {
-      const btnText = document.getElementById('tap-to-begin-text');
-      if (btnText) {
-        btnText.style.opacity = '0';
-        setTimeout(() => {
-          currentAttractIdx = (currentAttractIdx + 1) % attractTexts.length;
-          btnText.innerText = attractTexts[currentAttractIdx];
-          btnText.style.opacity = '1';
-        }, 500); // Wait for fade out
+    if (doorForcedMode === 'open') {
+      shouldOpen = true;
+    } else if (doorForcedMode === 'closed') {
+      shouldOpen = false;
+    } else {
+      const distZ = Math.abs(player.position.z - frontWallZ);
+      const distX = Math.abs(player.position.x);
+      if (distZ < 2.4 && distX < 2.0) {
+        shouldOpen = true;
       }
     }
-  }, 3000);
 
-  // --- Session Timer Logic ---
-  let sessionTimerInterval = null;
-  let warningCountdownInterval = null;
-  let sessionTimeLeft = 120; // 2 minutes
-  let warningTimeLeft = 10;
-  let isWarningActive = false;
-
-  function updateSessionDisplay() {
-    const display = document.getElementById('session-timer-display');
-    if (display) {
-      const m = Math.floor(sessionTimeLeft / 60).toString().padStart(2, '0');
-      const s = (sessionTimeLeft % 60).toString().padStart(2, '0');
-      display.innerText = `${m}:${s}`;
+    if (shouldOpen !== previousDoorAudibleState) {
+      AudioEngine.playDoorChime(shouldOpen);
+      previousDoorAudibleState = shouldOpen;
     }
+
+    if (doorSensorLedMat) {
+      doorSensorLedMat.color.setHex(shouldOpen ? 0x10b981 : 0x38bdf8);
+    }
+
+    doorTargetPercent = shouldOpen ? 1.0 : 0.0;
+    doorOpenPercent += (doorTargetPercent - doorOpenPercent) * (delta * 4.5);
+
+    const closedLX = -0.56;
+    const openLX = -1.68;
+    const closedRX = 0.56;
+    const openRX = 1.68;
+
+    doorLeftMesh.position.x = closedLX + (openLX - closedLX) * doorOpenPercent;
+    doorRightMesh.position.x = closedRX + (openRX - closedRX) * doorOpenPercent;
   }
 
-  function resetSessionTimer() {
-    if (currentScreen === 'screen-01' || currentScreen === 'screen-20') return;
-    if (isWarningActive) return;
+  /* -------------------------------------------------------------
+     Subtle Human Breathing & Touchscreen Interaction Animation
+  ------------------------------------------------------------- */
+  function updateHumanAnimations(elapsed) {
+    humanCharacters.forEach(person => {
+      const ud = person.userData;
+      if (!ud) return;
 
-    clearInterval(sessionTimerInterval);
-    sessionTimeLeft = 120;
-    updateSessionDisplay();
-
-    sessionTimerInterval = setInterval(() => {
-      sessionTimeLeft--;
-      updateSessionDisplay();
-      
-      if (sessionTimeLeft <= 0) {
-        showTimeoutWarning();
+      // Kiosk interaction tapping animation
+      if (ud.pose === 'touching' && ud.rightArmGroup) {
+        // Natural tapping cycle: periodic tap motion with slight breathing
+        const tapCycle = Math.sin(elapsed * 1.8 + ud.phase);
+        ud.rightArmGroup.rotation.x = -0.55 + Math.max(0, tapCycle) * 0.18;
+        person.position.y = Math.sin(elapsed * 1.2 + ud.phase) * 0.003; // Subtle breathing sway
       }
-    }, 1000);
-  }
 
-  function stopSessionTimer() {
-    clearInterval(sessionTimerInterval);
-    clearInterval(warningCountdownInterval);
-    sessionTimerInterval = null;
-    isWarningActive = false;
-    const modal = document.getElementById('timeout-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-
-  function showTimeoutWarning() {
-    clearInterval(sessionTimerInterval);
-    isWarningActive = true;
-    warningTimeLeft = 10;
-    document.getElementById('warning-countdown').innerText = warningTimeLeft;
-    document.getElementById('timeout-modal').classList.remove('hidden');
-
-    warningCountdownInterval = setInterval(() => {
-      warningTimeLeft--;
-      document.getElementById('warning-countdown').innerText = warningTimeLeft;
-      if (warningTimeLeft <= 0) {
-        stopSessionTimer();
-        cancelSession();
+      // Sitting person checking phone
+      if (ud.pose === 'sitting') {
+        person.rotation.y = (Math.PI / 2) + Math.sin(elapsed * 0.8) * 0.04;
       }
-    }, 1000);
+
+      // Dynamic walking characters along waypoints
+      if (ud.pose === 'walking' && ud.path && ud.path.length > 0) {
+        if (ud.targetIndex === undefined) ud.targetIndex = 0;
+        const target = ud.path[ud.targetIndex];
+        const dx = target.x - person.position.x;
+        const dz = target.z - person.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+
+        if (dist < 0.25) {
+          ud.targetIndex = (ud.targetIndex + 1) % ud.path.length;
+        } else {
+          const moveDist = 0.016 * (ud.speed || 0.8);
+          person.position.x += (dx / dist) * moveDist;
+          person.position.z += (dz / dist) * moveDist;
+
+          // Face movement direction
+          const targetAngle = Math.atan2(dx, dz);
+          person.rotation.y = targetAngle;
+
+          // Leg & arm stride swing
+          const swing = Math.sin(elapsed * 6.5 * (ud.speed || 0.8));
+          person.position.y = Math.abs(Math.sin(elapsed * 6.5)) * 0.02; // Vertical walking bounce
+          if (ud.legs) {
+            ud.legs[0].rotation.x = swing * 0.45;
+            ud.legs[1].rotation.x = -swing * 0.45;
+          }
+          if (ud.arms) {
+            ud.arms[0].rotation.x = -swing * 0.35;
+            ud.arms[1].rotation.x = swing * 0.35;
+          }
+        }
+      }
+    });
   }
 
-  function extendSession(e) {
-    if (e) e.stopPropagation();
-    stopSessionTimer();
-    resetSessionTimer();
+  /* -------------------------------------------------------------
+     Window Resize & Initialization
+  ------------------------------------------------------------- */
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  // Reset timer on any screen interaction
-  document.addEventListener('click', resetSessionTimer);
-  document.addEventListener('touchstart', resetSessionTimer);
+  function init() {
+    container = document.getElementById('canvas-container');
 
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0f17);
+    scene.fog = new THREE.FogExp2(0x0b0f17, 0.025);
+
+    camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 60);
+    camera.rotation.order = 'YXZ';
+    camera.position.copy(player.position);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.98;
+    renderer.xr.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+    orbitControls.enableDamping = true;
+    orbitControls.dampingFactor = 0.06;
+    orbitControls.enabled = false;
+
+    // Warm Architectural Lighting & Natural Room Bounce
+    ambientLight = new THREE.AmbientLight(0xfff5e8, 0.58);
+    scene.add(ambientLight);
+
+    const hemiLight = new THREE.HemisphereLight(0xfef3c7, 0x8c7b68, 0.62);
+    scene.add(hemiLight);
+
+    // Subtle Natural Daylight Fill Coming Through the Front Glass Entrance
+    const entranceFillLight = new THREE.DirectionalLight(0xfff8eb, 0.45);
+    entranceFillLight.position.set(0, 2.8, 8.5);
+    entranceFillLight.target.position.set(0, 1.0, 0);
+    scene.add(entranceFillLight, entranceFillLight.target);
+
+    // Warm 3200K Overhead Spotlights Above Each Kiosk Bay
+    [-4.6, -1.6, 1.6, 4.6].forEach(sx => {
+      const spot = new THREE.SpotLight(0xffe8c8, 1.15, 9.5, Math.PI / 3.4, 0.55, 1.2);
+      spot.position.set(sx, 3.6, 0.65);
+      spot.target.position.set(sx, 0.9, -0.6);
+      spot.castShadow = true;
+      spot.shadow.bias = -0.0005;
+      scene.add(spot, spot.target);
+      mainSpotlights.push(spot);
+    });
+
+    buildBankArchitecture();
+    buildKioskStations();
+    setupEventHandlers();
+    setupVR();
+
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.getElapsedTime();
+
+      TWEEN.update();
+      updatePhysics(delta);
+      updateAutomaticDoors(delta);
+      updateHumanAnimations(elapsed);
+
+      if (!isWalkMode && orbitControls.enabled) {
+        orbitControls.update();
+      }
+
+      renderer.render(scene, camera);
+    });
+  }
+
+  window.onload = init;
 </script>
 </body>
 </html>
-
-
-
