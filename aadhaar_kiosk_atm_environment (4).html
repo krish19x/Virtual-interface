@@ -211,7 +211,7 @@
 
       <!-- Live interactive frame embedding the Aadhaar prototype interface -->
       <div class="flex-1 w-full bg-slate-950 rounded-2xl overflow-hidden border border-white/10 relative shadow-inner">
-        <iframe id="kiosk-iframe" src="../UI Project AADHAAR/index.html" class="w-full h-full border-0 rounded-2xl" allow="camera; microphone; display-capture"></iframe>
+        <iframe id="kiosk-iframe" src="index.html" class="w-full h-full border-0 rounded-2xl" allow="camera; microphone; display-capture"></iframe>
       </div>
 
       <div class="pt-3 mt-1 flex items-center justify-between text-xs text-slate-400">
@@ -438,74 +438,132 @@
   }
 
   function createKioskScreenTexture(podIndex, stepIndex) {
+    // Exact visual rendering of G:\Github\Virtual interface\index.html in 11:8 landscape
     const steps = [
       {
-        title: 'Aadhaar Self-Service',
-        sub: 'Touch anywhere to begin • English / हिंदी',
-        cards: ['Update Address & Demographics', 'Biometric & Photo Update', 'Download / Order PVC Card']
+        title: 'Select Service / सेवा चुनें',
+        sub: 'Touch to select an option • English / हिंदी',
+        cards: ['Aadhaar Update & Corrections', 'Biometric & Photo Lock/Unlock', 'Download / Order PVC Card', 'Check Enrolment Status']
       },
       {
-        title: 'Biometric Capture',
-        sub: 'Align eyes with Iris Lens & place finger',
-        cards: ['1. Face Photo Verified', '2. Iris Scan Ready (1550mm)', '3. Fingerprint Platen Active']
+        title: 'Enter 12-Digit Aadhaar',
+        sub: 'अपना 12 अंकों का आधार नंबर दर्ज करें',
+        cards: ['UID: 4892 •••• ••••', 'OTP sent to Linked Mobile', 'Biometric Verification Ready', 'Assisted Help Mode']
       },
       {
-        title: 'Document Scanner',
-        sub: 'Place A4 Proof of Address on bed (900mm)',
-        cards: ['Auto-OCR Verification Ready', 'DigiLocker Cloud Sync', 'Instant URN Slip Print']
+        title: 'Biometric Capture Stage',
+        sub: 'Place thumb on scanner platen / अंगूठा रखें',
+        cards: ['Face Liveness: 98% Confirmed', 'Iris Alignment: Optimal', 'Fingerprint Scan: Processing', 'Security Hash Encrypted']
       }
     ];
 
     const currentStep = steps[stepIndex % steps.length];
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 1024;
+    canvas.width = 1100;
+    canvas.height = 800; // 11:8 ratio matching index.html
     const ctx = canvas.getContext('2d');
 
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, 512, 1024);
-
-    // Top Header
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(0, 0, 512, 110);
-    ctx.fillStyle = '#f59e0b';
-    ctx.font = 'bold 26px "JetBrains Mono", monospace';
-    ctx.fillText(`POD 0${podIndex} • UIDAI`, 32, 65);
-
-    // Main Prompt
+    // Outer Bezel Frame
     ctx.fillStyle = '#0f172a';
-    ctx.font = '800 38px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText(currentStep.title, 32, 185);
+    ctx.fillRect(0, 0, 1100, 800);
 
-    ctx.fillStyle = '#475569';
-    ctx.font = '500 21px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText(currentStep.sub, 32, 225);
-
-    // Interactive Cards
-    currentStep.cards.forEach((label, i) => {
-      const y = 285 + i * 165;
-      ctx.fillStyle = i === 0 ? '#eef2ff' : '#ffffff';
-      ctx.strokeStyle = i === 0 ? '#4f46e5' : '#cbd5e1';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.roundRect(32, y, 448, 135, 22);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = i === 0 ? '#312e81' : '#1e293b';
-      ctx.font = '700 24px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(label, 56, y + 76);
-    });
-
-    // Bottom CTA Button
-    ctx.fillStyle = '#4f46e5';
+    // Screen Inner Background (matches index.html '#f5eae7' warm peach/cream background)
+    ctx.fillStyle = '#f5eae7';
     ctx.beginPath();
-    ctx.roundRect(32, 830, 448, 95, 24);
+    ctx.roundRect(24, 24, 1052, 752, 36);
+    ctx.fill();
+
+    // Top Navigation Header Bar of index.html
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(44, 44, 1012, 90, 22);
+    ctx.fill();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Government of India & UIDAI Logo badge
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.roundRect(62, 58, 62, 62, 16);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 28px "Plus Jakarta Sans", sans-serif';
+    ctx.font = 'bold 30px "Plus Jakarta Sans", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('TAP SCREEN TO CONTINUE →', 256, 888);
+    ctx.fillText('आ', 93, 102);
+
+    ctx.fillStyle = '#1e293b';
+    ctx.textAlign = 'left';
+    ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('Unique Identification Authority of India', 140, 84);
+    ctx.font = '600 16px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(`Government of India • Kiosk Station 0${podIndex}`, 140, 112);
+
+    // Language / Help Pill
+    ctx.fillStyle = '#f1f5f9';
+    ctx.beginPath();
+    ctx.roundRect(880, 60, 150, 56, 16);
+    ctx.fill();
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.stroke();
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 17px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('English / हिंदी', 955, 95);
+
+    // Main Content Title from index.html
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 36px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(currentStep.title, 56, 192);
+
+    ctx.fillStyle = '#475569';
+    ctx.font = '500 20px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(currentStep.sub, 56, 230);
+
+    // 2x2 Grid of Interactive Action Cards matching index.html
+    const gridCols = [56, 564];
+    const gridRows = [265, 435];
+    currentStep.cards.forEach((label, i) => {
+      const gx = gridCols[i % 2];
+      const gy = gridRows[Math.floor(i / 2)];
+      
+      // Card Box
+      ctx.fillStyle = i === 0 ? '#ffffff' : '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(gx, gy, 480, 145, 24);
+      ctx.fill();
+      ctx.strokeStyle = i === 0 ? '#6d6ca2' : '#e2e8f0';
+      ctx.lineWidth = i === 0 ? 3.5 : 2;
+      ctx.stroke();
+
+      // Icon circle
+      ctx.fillStyle = i === 0 ? '#6d6ca2' : '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(gx + 55, gy + 72, 32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = i === 0 ? '#ffffff' : '#6d6ca2';
+      ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(i + 1), gx + 55, gy + 81);
+
+      // Card Label
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '700 20px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, gx + 104, gy + 79);
+    });
+
+    // Bottom CTA Button matching index.html primary button (#6d6ca2)
+    ctx.fillStyle = '#6d6ca2';
+    ctx.beginPath();
+    ctx.roundRect(310, 630, 480, 85, 22);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Touch Screen to Open Interface ➔', 550, 683);
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.needsUpdate = true;
