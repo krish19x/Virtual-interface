@@ -1040,14 +1040,19 @@
       return person;
     }
 
-    // Standing / Interacting with Kiosk Pose
-    [-0.09, 0.09].forEach(lx => {
+    // Standing / Interacting / Walking Pose
+    const legs = [];
+    [-0.09, 0.09].forEach((lx, lIdx) => {
+      const legGroup = new THREE.Group();
+      legGroup.position.set(lx, 0.86, 0);
       const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.052, 0.86, 14), pantsMat);
-      leg.position.set(lx, 0.45, 0);
+      leg.position.set(0, -0.41, 0);
       leg.castShadow = true;
       const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.065, 0.22), shoeMat);
-      shoe.position.set(lx, 0.032, 0.04);
-      person.add(leg, shoe);
+      shoe.position.set(0, -0.83, 0.04);
+      legGroup.add(leg, shoe);
+      person.add(legGroup);
+      legs.push(legGroup);
     });
 
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.135, 0.56, 18), shirtMat);
@@ -1091,62 +1096,144 @@
     }
     person.add(rightArmGroup);
 
-    person.userData = { rightArmGroup, pose, phase: Math.random() * Math.PI * 2 };
+    person.userData = { 
+      rightArmGroup, 
+      leftUpperArm,
+      arms: [leftUpperArm, rightArmGroup],
+      legs: legs,
+      pose, 
+      speed: config.speed || 0.8,
+      path: config.path || null,
+      targetIndex: 0,
+      phase: Math.random() * Math.PI * 2 
+    };
     return person;
   }
 
   function buildHumanCharacters() {
+    // 4 Kiosks: X = [-4.6, -1.6, 1.6, 4.6] at Z = -0.6
+    // Humans stand at Z ~ 0.22 facing kiosk (rotY = Math.PI)
+    // 3 Kiosks actively occupied by citizens, 1 kiosk (Pod 02: x = -1.6) completely empty for the user!
+
+    // Kiosk 1 Occupant: Citizen updating address & interacting with screen
     const user1 = createHumanPerson({
       x: -4.6,
-      z: 0.22,
+      z: 0.16,
       rotY: Math.PI,
       height: 1.72,
       skinColor: 0xc68642,
-      shirtColor: 0x0284c7,
+      shirtColor: 0x0284c7, // Indian postal blue
       pantsColor: 0x1e293b,
-      pose: 'touching'
+      pose: 'touching',
+      speed: 0
     });
     scene.add(user1);
     humanCharacters.push(user1);
 
-    const user2 = createHumanPerson({
-      x: 1.6,
-      z: 0.25,
-      rotY: Math.PI,
-      height: 1.62,
-      skinColor: 0xd99b66,
-      shirtColor: 0xb91c1c,
-      pantsColor: 0xf8fafc,
-      pose: 'touching'
-    });
-    scene.add(user2);
-    humanCharacters.push(user2);
+    // KIOSK 2 (x = -1.6) IS LEFT EMPTY FOR THE USER TO WALK UP AND INTERACT!
 
+    // Kiosk 3 Occupant: Citizen performing biometric fingerprint authentication
+    const user3 = createHumanPerson({
+      x: 1.6,
+      z: 0.18,
+      rotY: Math.PI,
+      height: 1.66,
+      skinColor: 0xd99b66,
+      shirtColor: 0x059669, // Emerald green kurta
+      pantsColor: 0xf1f5f9,
+      pose: 'touching',
+      speed: 0
+    });
+    scene.add(user3);
+    humanCharacters.push(user3);
+
+    // Kiosk 4 Occupant: Senior citizen completing Aadhaar PVC reprint
+    const user4 = createHumanPerson({
+      x: 4.6,
+      z: 0.17,
+      rotY: Math.PI,
+      height: 1.68,
+      skinColor: 0xb87333,
+      shirtColor: 0xd97706, // Amber/Saffron shirt
+      pantsColor: 0x334155,
+      pose: 'touching',
+      speed: 0
+    });
+    scene.add(user4);
+    humanCharacters.push(user4);
+
+    // Waiting Bench Citizen checking mobile phone
     const waiter = createHumanPerson({
       x: -5.2,
       z: 2.5,
       rotY: Math.PI / 2,
       height: 1.74,
       skinColor: 0xb87333,
-      shirtColor: 0x334155,
+      shirtColor: 0x475569,
       pantsColor: 0x0f172a,
-      pose: 'sitting'
+      pose: 'sitting',
+      speed: 0
     });
     scene.add(waiter);
     humanCharacters.push(waiter);
 
+    // UIDAI Vestibule Security / Helpdesk Officer standing at side
     const assistant = createHumanPerson({
       x: 5.5,
       z: 2.4,
       rotY: -Math.PI * 0.72,
-      height: 1.75,
+      height: 1.78,
       skinColor: 0xc68642,
-      shirtColor: 0x1e3a8a,
+      shirtColor: 0x1e3a8a, // Uniform navy blue
       pantsColor: 0x0f172a,
-      pose: 'standing'
+      pose: 'standing',
+      speed: 0
     });
     scene.add(assistant);
     humanCharacters.push(assistant);
+
+    // Dynamic Walking Citizen 1: Walking across vestibule from entrance to seating area
+    const walker1 = createHumanPerson({
+      x: -2.0,
+      z: 4.8,
+      rotY: 0,
+      height: 1.70,
+      skinColor: 0xc68642,
+      shirtColor: 0x9333ea, // Purple shirt
+      pantsColor: 0x1e293b,
+      pose: 'walking',
+      speed: 0.85,
+      path: [
+        { x: -1.2, z: 4.6 },
+        { x: -3.8, z: 2.8 },
+        { x: -4.2, z: 1.8 },
+        { x: -2.5, z: 2.8 },
+        { x: -0.5, z: 4.8 }
+      ]
+    });
+    scene.add(walker1);
+    humanCharacters.push(walker1);
+
+    // Dynamic Walking Citizen 2: Walking after service completion toward the sliding glass doors
+    const walker2 = createHumanPerson({
+      x: 3.2,
+      z: 1.6,
+      rotY: 0,
+      height: 1.65,
+      skinColor: 0xd99b66,
+      shirtColor: 0xe11d48, // Rose red top
+      pantsColor: 0x0f172a,
+      pose: 'walking',
+      speed: 0.72,
+      path: [
+        { x: 3.4, z: 1.5 },
+        { x: 1.8, z: 3.2 },
+        { x: 0.0, z: 5.4 },
+        { x: 2.2, z: 3.2 }
+      ]
+    });
+    scene.add(walker2);
+    humanCharacters.push(walker2);
   }
 
   /* -------------------------------------------------------------
@@ -1251,18 +1338,19 @@
       // 2. Kiosk.obj 3D Model Instance
       if (kioskBaseModel) {
         const kioskClone = kioskBaseModel.clone(true);
-        // OBJ coordinates: Z is height (0 to 170cm), Y is depth (-23 to 25cm), X is width (-32.5 to 32.5cm)
-        // Orient so Z becomes Three.js Y (up), and Y faces user (positive Z in scene)
+        // Correct orientation:
+        // In OBJ, front screen normal has negative Y (-0.82) and height is Z [0, 170cm].
+        // rotation.x = -Math.PI/2 maps Z_obj -> +Y (Up) and -Y_obj -> +Z (Facing forward into the room towards the user)
         kioskClone.rotation.x = -Math.PI / 2;
-        kioskClone.rotation.z = Math.PI; // Face outwards toward vestibule
-        kioskClone.scale.set(0.01, 0.01, 0.01); // Convert cm to meters (1.70m tall)
+        kioskClone.rotation.y = 0;
+        kioskClone.rotation.z = 0;
+        kioskClone.scale.set(0.01, 0.01, 0.01);
         kioskClone.position.set(0, 0, 0);
 
         kioskClone.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
-            // Apply refined materials
             child.material = kioskBodyMaterial;
           }
         });
@@ -1281,17 +1369,16 @@
 
       // 3. Interactive Touchscreen & Display Surface
       const screenObj = createKioskScreenTexture(idx + 1, 0);
-      // Landscape/portrait terminal screen matching Kiosk.obj glass face: 52cm wide x 40cm high
-      const screenGeo = new THREE.PlaneGeometry(0.52, 0.40);
+      const screenGeo = new THREE.PlaneGeometry(0.53, 0.41);
       const screenMat = new THREE.MeshBasicMaterial({ 
         map: screenObj.texture,
         transparent: false,
         side: THREE.DoubleSide
       });
       const screenMesh = new THREE.Mesh(screenGeo, screenMat);
-      // Position screen right over Kiosk.obj angled display surface (~1.26m high, tilted ~18 deg)
-      screenMesh.position.set(0, 1.25, 0.065);
-      screenMesh.rotation.x = -0.32; // ~18.3 degrees inclination facing standing user
+      // Screen face in +Z orientation: Y=1.265m, Z=0.018m, tilted back ~17 degrees
+      screenMesh.position.set(0.005, 1.265, 0.018);
+      screenMesh.rotation.x = -0.296;
       screenMesh.userData = {
         podIndex: idx + 1,
         activeStep: 0,
@@ -1301,19 +1388,19 @@
       interactiveScreens.push(screenMesh);
 
       // Screen Bezel border
-      const bezelGeo = new THREE.BoxGeometry(0.54, 0.42, 0.015);
+      const bezelGeo = new THREE.BoxGeometry(0.55, 0.43, 0.015);
       const bezelMesh = new THREE.Mesh(bezelGeo, kioskDarkAccentMaterial);
-      bezelMesh.position.set(0, 1.25, 0.058);
-      bezelMesh.rotation.x = -0.32;
+      bezelMesh.position.set(0.005, 1.265, 0.012);
+      bezelMesh.rotation.x = -0.296;
       podGroup.add(bezelMesh);
 
-      // Ambient Biometric / Scanner Glow LED underneath screen area
+      // Ambient Biometric Scanner Glow LED strip underneath screen
       const scannerGlow = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.35, 0.015),
+        new THREE.PlaneGeometry(0.38, 0.018),
         new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide })
       );
-      scannerGlow.position.set(0, 0.98, 0.16);
-      scannerGlow.rotation.x = -Math.PI / 3;
+      scannerGlow.position.set(0.005, 0.94, 0.145);
+      scannerGlow.rotation.x = -0.55;
       podGroup.add(scannerGlow);
 
       scene.add(podGroup);
@@ -1694,9 +1781,53 @@
   ------------------------------------------------------------- */
   function updateHumanAnimations(elapsed) {
     humanCharacters.forEach(person => {
-      const { rightArmGroup, pose, phase } = person.userData;
-      if (pose === 'touching' && rightArmGroup) {
-        rightArmGroup.rotation.x = Math.sin(elapsed * 2.2 + phase) * 0.06;
+      const ud = person.userData;
+      if (!ud) return;
+
+      // Kiosk interaction tapping animation
+      if (ud.pose === 'touching' && ud.rightArmGroup) {
+        // Natural tapping cycle: periodic tap motion with slight breathing
+        const tapCycle = Math.sin(elapsed * 1.8 + ud.phase);
+        ud.rightArmGroup.rotation.x = -0.55 + Math.max(0, tapCycle) * 0.18;
+        person.position.y = Math.sin(elapsed * 1.2 + ud.phase) * 0.003; // Subtle breathing sway
+      }
+
+      // Sitting person checking phone
+      if (ud.pose === 'sitting') {
+        person.rotation.y = (Math.PI / 2) + Math.sin(elapsed * 0.8) * 0.04;
+      }
+
+      // Dynamic walking characters along waypoints
+      if (ud.pose === 'walking' && ud.path && ud.path.length > 0) {
+        if (ud.targetIndex === undefined) ud.targetIndex = 0;
+        const target = ud.path[ud.targetIndex];
+        const dx = target.x - person.position.x;
+        const dz = target.z - person.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+
+        if (dist < 0.25) {
+          ud.targetIndex = (ud.targetIndex + 1) % ud.path.length;
+        } else {
+          const moveDist = 0.016 * (ud.speed || 0.8);
+          person.position.x += (dx / dist) * moveDist;
+          person.position.z += (dz / dist) * moveDist;
+
+          // Face movement direction
+          const targetAngle = Math.atan2(dx, dz);
+          person.rotation.y = targetAngle;
+
+          // Leg & arm stride swing
+          const swing = Math.sin(elapsed * 6.5 * (ud.speed || 0.8));
+          person.position.y = Math.abs(Math.sin(elapsed * 6.5)) * 0.02; // Vertical walking bounce
+          if (ud.legs) {
+            ud.legs[0].rotation.x = swing * 0.45;
+            ud.legs[1].rotation.x = -swing * 0.45;
+          }
+          if (ud.arms) {
+            ud.arms[0].rotation.x = -swing * 0.35;
+            ud.arms[1].rotation.x = swing * 0.35;
+          }
+        }
       }
     });
   }
