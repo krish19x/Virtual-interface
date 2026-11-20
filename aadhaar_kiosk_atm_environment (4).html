@@ -1398,6 +1398,7 @@
     podXPositions.forEach((xPos, idx) => {
       const podGroup = new THREE.Group();
       podGroup.position.set(xPos, 0, -0.6);
+      podGroup.userData = { podGroup: true, podIndex: idx + 1 };
 
       // 1. Overhead Crimson ATM Canopy with Illuminated Ring
       const canopyGroup = new THREE.Group();
@@ -1442,10 +1443,15 @@
             child.castShadow = true;
             child.receiveShadow = true;
 
-            // Apply realistic PBR materials according to Kiosk.mtl material names
-            const matName = child.material && child.material.name ? child.material.name : '';
-            if (matName.includes('Glass') || matName.includes('Blue')) {
-              child.material = glassBlueMaterial;
+            // Handle both single material and MultiMaterial array created by OBJLoader
+            if (Array.isArray(child.material)) {
+              child.material = child.material.map(m => {
+                const name = (m && m.name) ? m.name : '';
+                return (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
+              });
+            } else if (child.material) {
+              const name = child.material.name || '';
+              child.material = (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
             } else {
               child.material = absWhiteMaterial;
             }
@@ -1473,8 +1479,8 @@
         side: THREE.DoubleSide
       });
       const screenMesh = new THREE.Mesh(screenGeo, screenMat);
-      // Screen face in +Z orientation: Y=1.265m, Z=0.018m, tilted back ~17 degrees
-      screenMesh.position.set(0.005, 1.265, 0.018);
+      // Screen face in +Z orientation: positioned cleanly forward so it never clips with chassis
+      screenMesh.position.set(0.005, 1.28, 0.215);
       screenMesh.rotation.x = -0.296;
       screenMesh.userData = {
         podIndex: idx + 1,
@@ -1487,7 +1493,7 @@
       // Screen Bezel border
       const bezelGeo = new THREE.BoxGeometry(0.55, 0.43, 0.015);
       const bezelMesh = new THREE.Mesh(bezelGeo, kioskDarkAccentMaterial);
-      bezelMesh.position.set(0.005, 1.265, 0.012);
+      bezelMesh.position.set(0.005, 1.28, 0.208);
       bezelMesh.rotation.x = -0.296;
       podGroup.add(bezelMesh);
 
@@ -1567,22 +1573,52 @@
     const raycaster = new THREE.Raycaster();
     const mouseCoord = new THREE.Vector2();
 
-    container.addEventListener('mousedown', (e) => {
-      mouseCoord.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouseCoord.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouseCoord, camera);
-
-      const intersects = raycaster.intersectObjects(interactiveScreens);
-      if (intersects.length > 0) {
-        onScreenClicked(intersects[0].object);
-        return;
-      }
-
+    let dragDist = 0;
+    container.addEventListener('pointerdown', (e) => {
+      dragDist = 0;
       if (isWalkMode) {
         player.isDragging = true;
         player.dragStart.x = e.clientX;
         player.dragStart.y = e.clientY;
       }
+    });
+
+    container.addEventListener('pointermove', (e) => {
+      if (isWalkMode && player.isDragging) {
+        dragDist += Math.hypot(e.clientX - player.dragStart.x, e.clientY - player.dragStart.y);
+      }
+    });
+
+    container.addEventListener('pointerup', (e) => {
+      // If user clicked or tapped without heavy dragging, check for screen hit
+      if (dragDist < 12) {
+        mouseCoord.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouseCoord.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouseCoord, camera);
+
+        // Raycast against interactive screens as well as pod groups
+        const intersects = raycaster.intersectObjects(interactiveScreens, true);
+        if (intersects.length > 0) {
+          onScreenClicked(intersects[0].object);
+          player.isDragging = false;
+          return;
+        }
+
+        // Also check if user clicked anywhere on the kiosk mesh
+        const podIntersects = raycaster.intersectObjects(kioskGroupList, true);
+        if (podIntersects.length > 0) {
+          // Find corresponding screenMesh in this kiosk pod
+          let obj = podIntersects[0].object;
+          while (obj && !obj.userData.podGroup && obj.parent && obj.parent !== scene) {
+            obj = obj.parent;
+          }
+          const matchedScreen = interactiveScreens.find(s => s.userData.podIndex === (obj.userData.podIndex || 1)) || interactiveScreens[0];
+          onScreenClicked(matchedScreen);
+          player.isDragging = false;
+          return;
+        }
+      }
+      player.isDragging = false;
     });
 
     window.addEventListener('mouseup', () => {
