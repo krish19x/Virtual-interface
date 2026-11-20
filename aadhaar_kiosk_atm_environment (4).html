@@ -15,7 +15,9 @@
   <!-- Three.js, Controls & Tween -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+  <script src="kiosk_obj_data.js"></script>
 
   <style>
     body {
@@ -183,31 +185,41 @@
     <span>Walk toward the glass entrance doors to trigger the automatic motion sensor. Click any kiosk screen to cycle services.</span>
   </div>
 
-  <!-- Kiosk Interactive Modal / Screen Viewer -->
-  <div id="kiosk-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md hidden items-center justify-center p-4">
-    <div class="glass-card max-w-md w-full rounded-3xl p-6 border border-white/20 shadow-2xl relative">
-      <button id="modal-close-btn" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-white font-bold">
-          <i class="fa-solid fa-id-card"></i>
+  <!-- Kiosk Interactive Modal / VR Screen Viewer -->
+  <div id="kiosk-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-2 sm:p-6">
+    <div class="glass-card w-full max-w-4xl h-[88vh] rounded-3xl p-4 sm:p-6 border border-white/20 shadow-2xl relative flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-white font-bold shadow-md">
+            <i class="fa-solid fa-fingerprint"></i>
+          </div>
+          <div>
+            <h3 id="modal-title" class="font-bold text-white text-base sm:text-lg">UIDAI Interactive Kiosk Terminal</h3>
+            <p id="modal-pod-id" class="text-xs text-amber-400 font-mono-code">POD STATION 01 • LIVE ACTIVE</p>
+          </div>
         </div>
-        <div>
-          <h3 id="modal-title" class="font-bold text-white text-base">Aadhaar Interactive Terminal</h3>
-          <p id="modal-pod-id" class="text-xs text-amber-400 font-mono-code">POD STATION 01</p>
+        <div class="flex items-center gap-2">
+          <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold hidden sm:inline-flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Screen Synchronized
+          </span>
+          <button id="modal-close-btn" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
         </div>
       </div>
 
-      <div id="modal-screen-content" class="bg-slate-950 rounded-2xl p-4 border border-white/10 mb-4 min-h-[220px] flex flex-col justify-between"></div>
+      <!-- Live interactive frame embedding the Aadhaar prototype interface -->
+      <div class="flex-1 w-full bg-slate-950 rounded-2xl overflow-hidden border border-white/10 relative shadow-inner">
+        <iframe id="kiosk-iframe" src="../UI Project AADHAAR/index.html" class="w-full h-full border-0 rounded-2xl" allow="camera; microphone; display-capture"></iframe>
+      </div>
 
-      <div class="flex gap-2">
-        <button id="modal-action-btn" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 font-bold text-xs uppercase tracking-wider text-white shadow-lg transition-all">
-          Proceed to Biometrics
-        </button>
-        <button id="modal-cancel-btn" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 font-semibold text-xs text-slate-300 transition-colors">
-          Close
+      <div class="pt-3 mt-1 flex items-center justify-between text-xs text-slate-400">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+          <span>Official UIDAI High-Security Interactive Session</span>
+        </div>
+        <button id="modal-cancel-btn" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 font-semibold text-xs text-slate-200 transition-colors">
+          Exit Terminal View
         </button>
       </div>
     </div>
@@ -1180,7 +1192,31 @@
 
   function buildKioskStations() {
     const podXPositions = [-4.6, -1.6, 1.6, 4.6];
-    const aadhaarHeaderTex = createAadhaarHeaderTexture();
+
+    // Load and parse Kiosk.obj geometry using OBJLoader
+    const objLoader = new THREE.OBJLoader();
+    let kioskBaseModel = null;
+
+    if (window.KIOSK_OBJ_TEXT) {
+      try {
+        kioskBaseModel = objLoader.parse(window.KIOSK_OBJ_TEXT);
+      } catch (err) {
+        console.error("Error parsing KIOSK_OBJ_TEXT:", err);
+      }
+    }
+
+    // Material definitions for Kiosk.obj
+    const kioskBodyMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf1f5f9,
+      metalness: 0.2,
+      roughness: 0.35
+    });
+
+    const kioskDarkAccentMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      metalness: 0.45,
+      roughness: 0.3
+    });
 
     podXPositions.forEach((xPos, idx) => {
       const podGroup = new THREE.Group();
@@ -1212,121 +1248,50 @@
 
       podGroup.add(canopyGroup);
 
-      // 2. Sculpted "2. LEAN TOWER" Kiosk Chassis (1800mm H x 500mm W x 650mm D)
-      const champagneMat = new THREE.MeshStandardMaterial({
-        color: 0xe6dfd5,
-        metalness: 0.25,
-        roughness: 0.32
-      });
-      const darkCharcoalMat = new THREE.MeshStandardMaterial({
-        color: 0x26292e,
-        metalness: 0.55,
-        roughness: 0.28
-      });
+      // 2. Kiosk.obj 3D Model Instance
+      if (kioskBaseModel) {
+        const kioskClone = kioskBaseModel.clone(true);
+        // OBJ coordinates: Z is height (0 to 170cm), Y is depth (-23 to 25cm), X is width (-32.5 to 32.5cm)
+        // Orient so Z becomes Three.js Y (up), and Y faces user (positive Z in scene)
+        kioskClone.rotation.x = -Math.PI / 2;
+        kioskClone.rotation.z = Math.PI; // Face outwards toward vestibule
+        kioskClone.scale.set(0.01, 0.01, 0.01); // Convert cm to meters (1.70m tall)
+        kioskClone.position.set(0, 0, 0);
 
-      const profileShape = new THREE.Shape();
-      profileShape.moveTo(-0.23, 0.055);
-      profileShape.lineTo(0.22, 0.055);
-      profileShape.lineTo(0.22, 0.68);
-      profileShape.lineTo(0.41, 0.84);
-      profileShape.lineTo(0.41, 0.91);
-      profileShape.lineTo(0.23, 0.96);
-      profileShape.lineTo(0.23, 1.77);
-      profileShape.lineTo(0.20, 1.80);
-      profileShape.lineTo(-0.20, 1.80);
-      profileShape.lineTo(-0.23, 1.77);
-      profileShape.lineTo(-0.23, 0.055);
+        kioskClone.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            // Apply refined materials
+            child.material = kioskBodyMaterial;
+          }
+        });
 
-      const extrudeSettings = {
-        steps: 1,
-        depth: 0.48,
-        bevelEnabled: true,
-        bevelThickness: 0.01,
-        bevelSize: 0.01,
-        bevelSegments: 3
-      };
-
-      const chassisGeo = new THREE.ExtrudeGeometry(profileShape, extrudeSettings);
-      chassisGeo.rotateY(Math.PI / 2);
-      chassisGeo.translate(-0.24, 0, 0);
-      const chassisMesh = new THREE.Mesh(chassisGeo, champagneMat);
-      chassisMesh.castShadow = true;
-      chassisMesh.receiveShadow = true;
-      podGroup.add(chassisMesh);
-
-      // Dark Charcoal Full-Height Side Cheek Panels (500mm total width)
-      const sidePanelGeo = new THREE.BoxGeometry(0.022, 1.73, 0.44);
-      const leftSidePanel = new THREE.Mesh(sidePanelGeo, darkCharcoalMat);
-      leftSidePanel.position.set(-0.242, 0.92, 0.0);
-      const rightSidePanel = new THREE.Mesh(sidePanelGeo, darkCharcoalMat);
-      rightSidePanel.position.set(0.242, 0.92, 0.0);
-      podGroup.add(leftSidePanel, rightSidePanel);
-
-      // Lower Recessed Dark Charcoal Plinth Base
-      const baseGeo = new THREE.BoxGeometry(0.48, 0.055, 0.46);
-      const baseMesh = new THREE.Mesh(baseGeo, darkCharcoalMat);
-      baseMesh.position.set(0, 0.0275, -0.005);
-      baseMesh.castShadow = true;
-      podGroup.add(baseMesh);
-
-      // Signature Continuous Left Contour Red/Orange Ambient LED Piping Strip
-      const ledStripLower = new THREE.Mesh(
-        new THREE.BoxGeometry(0.012, 0.63, 0.014),
-        new THREE.MeshBasicMaterial({ color: 0xff3b30 })
-      );
-      ledStripLower.position.set(-0.234, 0.37, 0.228);
-
-      const ledStripMid = new THREE.Mesh(
-        new THREE.BoxGeometry(0.012, 0.25, 0.014),
-        new THREE.MeshBasicMaterial({ color: 0xff3b30 })
-      );
-      ledStripMid.position.set(-0.234, 0.77, 0.315);
-      ledStripMid.rotation.x = -0.84;
-
-      const ledStripUpper = new THREE.Mesh(
-        new THREE.BoxGeometry(0.012, 0.84, 0.014),
-        new THREE.MeshBasicMaterial({ color: 0xff3b30 })
-      );
-      ledStripUpper.position.set(-0.234, 1.36, 0.238);
-      podGroup.add(ledStripLower, ledStripMid, ledStripUpper);
-
-      // Perforated Speaker Grille Matrix on Lower Champagne Front Panel
-      const dotMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
-      for (let row = 0; row < 5; row++) {
-        for (let col = -4; col <= 4; col++) {
-          const dot = new THREE.Mesh(new THREE.CircleGeometry(0.0038, 8), dotMat);
-          dot.position.set(-0.04 + col * 0.02, 0.40 + row * 0.022, 0.231);
-          podGroup.add(dot);
-        }
+        podGroup.add(kioskClone);
       }
 
-      // Lower-Right Dark Charcoal Maintenance / Receipt Service Door Panel
-      const serviceDoorPanel = new THREE.Mesh(
-        new THREE.BoxGeometry(0.135, 0.62, 0.014),
-        darkCharcoalMat
+      // Base Pedestal Plinth
+      const plinth = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.42, 0.46, 0.04, 32),
+        kioskDarkAccentMaterial
       );
-      serviceDoorPanel.position.set(0.165, 0.37, 0.228);
-      const serviceDoorBorder = new THREE.Mesh(
-        new THREE.BoxGeometry(0.11, 0.34, 0.018),
-        new THREE.MeshStandardMaterial({ color: 0x181a1f, roughness: 0.4 })
-      );
-      serviceDoorBorder.position.set(0.165, 0.24, 0.229);
-      podGroup.add(serviceDoorPanel, serviceDoorBorder);
+      plinth.position.set(0, 0.02, 0);
+      plinth.receiveShadow = true;
+      podGroup.add(plinth);
 
-      // Crown Aadhaar Logo Decal above Touchscreen (~1710mm)
-      const logoCrown = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.16, 0.08),
-        new THREE.MeshBasicMaterial({ map: aadhaarHeaderTex, transparent: true })
-      );
-      logoCrown.position.set(-0.065, 1.71, 0.242);
-      podGroup.add(logoCrown);
-
-      // 3. Tall Slim Portrait Touchscreen (Centre: 1400mm = 1.40m)
+      // 3. Interactive Touchscreen & Display Surface
       const screenObj = createKioskScreenTexture(idx + 1, 0);
-      const screenGeo = new THREE.PlaneGeometry(0.24, 0.56);
-      const screenMat = new THREE.MeshBasicMaterial({ map: screenObj.texture });
+      // Landscape/portrait terminal screen matching Kiosk.obj glass face: 52cm wide x 40cm high
+      const screenGeo = new THREE.PlaneGeometry(0.52, 0.40);
+      const screenMat = new THREE.MeshBasicMaterial({ 
+        map: screenObj.texture,
+        transparent: false,
+        side: THREE.DoubleSide
+      });
       const screenMesh = new THREE.Mesh(screenGeo, screenMat);
-      screenMesh.position.set(-0.065, 1.38, 0.246);
+      // Position screen right over Kiosk.obj angled display surface (~1.26m high, tilted ~18 deg)
+      screenMesh.position.set(0, 1.25, 0.065);
+      screenMesh.rotation.x = -0.32; // ~18.3 degrees inclination facing standing user
       screenMesh.userData = {
         podIndex: idx + 1,
         activeStep: 0,
@@ -1335,62 +1300,21 @@
       podGroup.add(screenMesh);
       interactiveScreens.push(screenMesh);
 
-      const bezelGeo = new THREE.BoxGeometry(0.265, 0.585, 0.014);
-      const bezelMesh = new THREE.Mesh(bezelGeo, darkCharcoalMat);
-      bezelMesh.position.set(-0.065, 1.38, 0.240);
+      // Screen Bezel border
+      const bezelGeo = new THREE.BoxGeometry(0.54, 0.42, 0.015);
+      const bezelMesh = new THREE.Mesh(bezelGeo, kioskDarkAccentMaterial);
+      bezelMesh.position.set(0, 1.25, 0.058);
+      bezelMesh.rotation.x = -0.32;
       podGroup.add(bezelMesh);
 
-      // 4. Slim Dark Charcoal Biometric Hardware Column (Right Side)
-      const bioColumnGeo = new THREE.BoxGeometry(0.145, 0.85, 0.025);
-      const bioColumn = new THREE.Mesh(bioColumnGeo, darkCharcoalMat);
-      bioColumn.position.set(0.165, 1.37, 0.236);
-      podGroup.add(bioColumn);
-
-      // 4a. Identification Face Camera Module (1600mm = 1.60m)
-      const camRing = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.0055, 12, 24), champagneMat);
-      camRing.position.set(0.165, 1.60, 0.252);
-      const camHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.014, 20), new THREE.MeshBasicMaterial({ color: 0x090b10 }));
-      camHousing.rotation.x = Math.PI / 2;
-      camHousing.position.set(0.165, 1.60, 0.249);
-      const camLens = new THREE.Mesh(new THREE.SphereGeometry(0.011, 12, 12), new THREE.MeshBasicMaterial({ color: 0x1e293b }));
-      camLens.position.set(0.165, 1.60, 0.255);
-      podGroup.add(camRing, camHousing, camLens);
-
-      // 4b. Optical Iris Scanner Module (1550mm / 1.49m optical ring)
-      const irisRing = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.0055, 12, 24), champagneMat);
-      irisRing.position.set(0.165, 1.49, 0.252);
-      const irisLens = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.014, 20), new THREE.MeshBasicMaterial({ color: 0x0369a1 }));
-      irisLens.rotation.x = Math.PI / 2;
-      irisLens.position.set(0.165, 1.49, 0.249);
-      podGroup.add(irisRing, irisLens);
-
-      // 4c. Live Optical Fingerprint Scanner Platen (1050mm = 1.05m)
-      const fpHousing = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.16, 0.042), darkCharcoalMat);
-      fpHousing.position.set(0.165, 1.07, 0.255);
-      const fpGlass = new THREE.Mesh(new THREE.PlaneGeometry(0.068, 0.10), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
-      fpGlass.position.set(0.165, 1.06, 0.278);
-      fpGlass.rotation.x = -0.22;
-      podGroup.add(fpHousing, fpGlass);
-
-      // 5. Protruding Recessed Document Scanner Shelf (900mm = 0.90m, Total Depth: 650mm)
-      const docWell = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.055, 0.18), darkCharcoalMat);
-      docWell.position.set(-0.02, 0.895, 0.31);
-      const docGlassBed = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.31, 0.14),
-        new THREE.MeshPhysicalMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.2 })
+      // Ambient Biometric / Scanner Glow LED underneath screen area
+      const scannerGlow = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.35, 0.015),
+        new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide })
       );
-      docGlassBed.rotation.x = -Math.PI / 2;
-      docGlassBed.position.set(-0.02, 0.924, 0.315);
-
-      const scanBeam = new THREE.Mesh(new THREE.PlaneGeometry(0.29, 0.012), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
-      scanBeam.rotation.x = -Math.PI / 2;
-      scanBeam.position.set(-0.02, 0.926, 0.315);
-
-      const docLed = new THREE.Mesh(new THREE.PlaneGeometry(0.045, 0.035), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
-      docLed.rotation.x = -Math.PI / 2;
-      docLed.position.set(0.185, 0.924, 0.34);
-
-      podGroup.add(docWell, docGlassBed, scanBeam, docLed);
+      scannerGlow.position.set(0, 0.98, 0.16);
+      scannerGlow.rotation.x = -Math.PI / 3;
+      podGroup.add(scannerGlow);
 
       scene.add(podGroup);
       kioskGroupList.push(podGroup);
