@@ -15,6 +15,7 @@
   <!-- Three.js, Controls & Tween -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
   <script src="kiosk_obj_data.js"></script>
@@ -1281,23 +1282,38 @@
   function buildKioskStations() {
     const podXPositions = [-4.6, -1.6, 1.6, 4.6];
 
-    // Load and parse Kiosk.obj geometry using OBJLoader
-    const objLoader = new THREE.OBJLoader();
-    let kioskBaseModel = null;
-
-    if (window.KIOSK_OBJ_TEXT) {
+    // Load and parse materials from Kiosk.mtl using MTLLoader
+    let materialsCreator = null;
+    const mtlLoader = new THREE.MTLLoader();
+    if (window.KIOSK_MTL_TEXT) {
       try {
-        kioskBaseModel = objLoader.parse(window.KIOSK_OBJ_TEXT);
-      } catch (err) {
-        console.error("Error parsing KIOSK_OBJ_TEXT:", err);
+        materialsCreator = mtlLoader.parse(window.KIOSK_MTL_TEXT);
+        materialsCreator.preload();
+      } catch (e) {
+        console.warn("MTL parse warning:", e);
       }
     }
 
-    // Material definitions for Kiosk.obj
-    const kioskBodyMaterial = new THREE.MeshStandardMaterial({
-      color: 0xf1f5f9,
-      metalness: 0.2,
-      roughness: 0.35
+    // Kiosk.mtl exact colors:
+    // ABS_(White): Kd 1.0 0.878431 0.819608 (warm off-white / peach-cream chassis)
+    // Glass_-_Light_Color_(Blue): Kd 0.423529 0.768627 0.854902 (vibrant cyan-blue tint)
+    const absWhiteMaterial = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(1.0, 0.878431, 0.819608),
+      roughness: 0.28,
+      metalness: 0.08,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.2
+    });
+
+    const glassBlueMaterial = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(0.423529, 0.768627, 0.854902),
+      roughness: 0.1,
+      metalness: 0.15,
+      transmission: 0.65,
+      transparent: true,
+      opacity: 0.88,
+      ior: 1.52,
+      reflectivity: 0.9
     });
 
     const kioskDarkAccentMaterial = new THREE.MeshStandardMaterial({
@@ -1305,6 +1321,21 @@
       metalness: 0.45,
       roughness: 0.3
     });
+
+    // Parse Kiosk.obj with MTLLoader materials bound
+    const objLoader = new THREE.OBJLoader();
+    if (materialsCreator) {
+      objLoader.setMaterials(materialsCreator);
+    }
+
+    let kioskBaseModel = null;
+    if (window.KIOSK_OBJ_TEXT) {
+      try {
+        kioskBaseModel = objLoader.parse(window.KIOSK_OBJ_TEXT);
+      } catch (err) {
+        console.error("Error parsing KIOSK_OBJ_TEXT:", err);
+      }
+    }
 
     podXPositions.forEach((xPos, idx) => {
       const podGroup = new THREE.Group();
@@ -1352,7 +1383,14 @@
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
-            child.material = kioskBodyMaterial;
+
+            // Apply realistic PBR materials according to Kiosk.mtl material names
+            const matName = child.material && child.material.name ? child.material.name : '';
+            if (matName.includes('Glass') || matName.includes('Blue')) {
+              child.material = glassBlueMaterial;
+            } else {
+              child.material = absWhiteMaterial;
+            }
           }
         });
 
