@@ -343,41 +343,139 @@
     return tex;
   }
 
-  function createFloorTileTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    // Calm warm nude / travertine stone base
-    ctx.fillStyle = '#d9cfc1';
-    ctx.fillRect(0, 0, 512, 512);
+  // Photorealistic Polished Vitrified Porcelain Tile Maps (Color, Roughness, Bump/Grout)
+  function createFloorTileMaps() {
+    // 1. Color Map (1024x1024 Large Commercial Polished Marble/Porcelain)
+    const colorCanvas = document.createElement('canvas');
+    colorCanvas.width = 1024;
+    colorCanvas.height = 1024;
+    const ctx = colorCanvas.getContext('2d');
 
-    // Subtle organic stone texture variation
-    for (let i = 0; i < 450; i++) {
-      const x = Math.random() * 512;
-      const y = Math.random() * 512;
-      const r = 1 + Math.random() * 4;
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(180, 165, 145, 0.14)' : 'rgba(245, 238, 228, 0.18)';
+    // Base Italian Calacatta / Crema Marfil warmth
+    ctx.fillStyle = '#eae4d9';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Subtle natural mineral grain and cloudy stone depth
+    for (let i = 0; i < 1800; i++) {
+      const x = Math.random() * 1024;
+      const y = Math.random() * 1024;
+      const r = 2 + Math.random() * 8;
+      const isVein = Math.random() > 0.65;
+      ctx.fillStyle = isVein ? 'rgba(195, 180, 160, 0.11)' : 'rgba(255, 253, 248, 0.22)';
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Fine warm taupe grout lines
-    ctx.strokeStyle = '#bfb2a0';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(2, 2, 252, 252);
-    ctx.strokeRect(258, 2, 252, 252);
-    ctx.strokeRect(2, 258, 252, 252);
-    ctx.strokeRect(258, 258, 252, 252);
+    // Realistic delicate diagonal marble veining across individual slabs
+    ctx.strokeStyle = 'rgba(180, 165, 145, 0.08)';
+    ctx.lineWidth = 6;
+    for (let v = 0; v < 8; v++) {
+      ctx.beginPath();
+      let vx = Math.random() * 1024;
+      let vy = Math.random() * 1024;
+      ctx.moveTo(vx, vy);
+      for (let s = 0; s < 5; s++) {
+        vx += (Math.random() - 0.4) * 160;
+        vy += (Math.random() - 0.2) * 160;
+        ctx.lineTo(vx, vy);
+      }
+      ctx.stroke();
+    }
 
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(8, 6);
-    return tex;
+    // Deep architectural recessed grout lines (4x4 tile grid per repeat)
+    ctx.strokeStyle = '#9ca3af';
+    ctx.lineWidth = 5;
+    for (let c = 0; c <= 4; c++) {
+      const pos = c * 256;
+      ctx.beginPath();
+      ctx.moveTo(pos, 0);
+      ctx.lineTo(pos, 1024);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(0, pos);
+      ctx.lineTo(1024, pos);
+      ctx.stroke();
+    }
+
+    // 2. High-precision Roughness Map (Mirror-like gloss on tiles, rough matte grout)
+    const roughCanvas = document.createElement('canvas');
+    roughCanvas.width = 1024;
+    roughCanvas.height = 1024;
+    const rctx = roughCanvas.getContext('2d');
+
+    // High polish tiles = very low roughness (#2b2b2b ~ 0.17)
+    rctx.fillStyle = '#282828';
+    rctx.fillRect(0, 0, 1024, 1024);
+
+    // Subtle micro-scuffing on tile bodies
+    for (let s = 0; s < 600; s++) {
+      rctx.fillStyle = 'rgba(70, 70, 70, 0.15)';
+      rctx.beginPath();
+      rctx.arc(Math.random() * 1024, Math.random() * 1024, 1 + Math.random() * 3, 0, Math.PI * 2);
+      rctx.fill();
+    }
+
+    // Matte non-reflective grout lines = high roughness (#ffffff)
+    rctx.strokeStyle = '#e0e0e0';
+    rctx.lineWidth = 6;
+    for (let c = 0; c <= 4; c++) {
+      const pos = c * 256;
+      rctx.beginPath();
+      rctx.moveTo(pos, 0);
+      rctx.lineTo(pos, 1024);
+      rctx.stroke();
+      rctx.beginPath();
+      rctx.moveTo(0, pos);
+      rctx.lineTo(1024, pos);
+      rctx.stroke();
+    }
+
+    // 3. Normal / Bump Map for tactile recessed grout and beveled tile edges
+    const bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = 1024;
+    bumpCanvas.height = 1024;
+    const bctx = bumpCanvas.getContext('2d');
+
+    // Flat tile surface = mid-grey (0.5 height)
+    bctx.fillStyle = '#808080';
+    bctx.fillRect(0, 0, 1024, 1024);
+
+    // Recessed grout grooves = dark grey (#1a1a1a)
+    bctx.strokeStyle = '#202020';
+    bctx.lineWidth = 6;
+    for (let c = 0; c <= 4; c++) {
+      const pos = c * 256;
+      bctx.beginPath();
+      bctx.moveTo(pos, 0);
+      bctx.lineTo(pos, 1024);
+      bctx.stroke();
+      bctx.beginPath();
+      bctx.moveTo(0, pos);
+      bctx.lineTo(1024, pos);
+      bctx.stroke();
+    }
+
+    const colorTex = new THREE.CanvasTexture(colorCanvas);
+    colorTex.wrapS = colorTex.wrapT = THREE.RepeatWrapping;
+    colorTex.repeat.set(6, 4);
+
+    const roughTex = new THREE.CanvasTexture(roughCanvas);
+    roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping;
+    roughTex.repeat.set(6, 4);
+
+    const bumpTex = new THREE.CanvasTexture(bumpCanvas);
+    bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
+    bumpTex.repeat.set(6, 4);
+
+    return { colorTex, roughTex, bumpTex };
   }
 
+  // Backwards compatibility alias
+  function createFloorTileTexture() {
+    return createFloorTileMaps().colorTex;
+  }
   function createBrandBannerTexture(title, subtitle, bgColor = '#1e3a8a') {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
@@ -575,17 +673,45 @@
   ------------------------------------------------------------- */
   function buildBankArchitecture() {
     const oakWoodTex = createOakWoodTexture();
-    const floorTileTex = createFloorTileTexture();
 
-    // 1. Satin-Matte Calm Nude Travertine Tile Floor
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(16, 8.2),
-      new THREE.MeshStandardMaterial({ map: floorTileTex, roughness: 0.36, metalness: 0.04 })
-    );
+    // 1. Photorealistic Polished Vitrified Porcelain Tile Floor (PBR with Grout Bump & Specular Mapping)
+    const floorMaps = createFloorTileMaps();
+    const floorMat = new THREE.MeshStandardMaterial({
+      map: floorMaps.colorTex,
+      roughnessMap: floorMaps.roughTex,
+      bumpMap: floorMaps.bumpTex,
+      bumpScale: 0.0035,
+      roughness: 0.22,
+      metalness: 0.06
+    });
+
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 8.2), floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, 0, 1.5);
     floor.receiveShadow = true;
     scene.add(floor);
+
+    // Realistic Contact Ambient Occlusion (Soft shadow bake under architectural bases and back wall)
+    const wallAOGeom = new THREE.PlaneGeometry(16, 0.45);
+    const wallAOCanvas = document.createElement('canvas');
+    wallAOCanvas.width = 512;
+    wallAOCanvas.height = 64;
+    const aoCtx = wallAOCanvas.getContext('2d');
+    const grad = aoCtx.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, 'rgba(0, 0, 0, 0.48)');
+    grad.addColorStop(0.4, 'rgba(0, 0, 0, 0.22)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+    aoCtx.fillStyle = grad;
+    aoCtx.fillRect(0, 0, 512, 64);
+    const wallAOTex = new THREE.CanvasTexture(wallAOCanvas);
+
+    const wallAO = new THREE.Mesh(
+      wallAOGeom,
+      new THREE.MeshBasicMaterial({ map: wallAOTex, transparent: true, opacity: 0.85 })
+    );
+    wallAO.rotation.x = -Math.PI / 2;
+    wallAO.position.set(0, 0.002, -0.85);
+    scene.add(wallAO);
 
     // Muted Warm Terracotta/Amber Safety Boundary Line (1.4m in front of Kiosks)
     const safetyLine = new THREE.Mesh(
@@ -1187,40 +1313,29 @@
     const scale = height / 1.72;
     person.scale.set(scale, scale, scale);
 
-    // Physically-Based Materials with Subsurface Scattering and Velvet Sheen
+    // Three.js r128 Robust Physically-Based Human Materials
     const skinTex = createPhotorealisticSkinTexture(skinColor);
-    const skinMat = new THREE.MeshPhysicalMaterial({
+    const skinMat = new THREE.MeshStandardMaterial({
       color: skinColor,
       map: skinTex,
-      roughness: 0.42,
-      metalness: 0.04,
-      transmission: 0.08, // Subsurface scattering approximation
-      thickness: 0.35,
-      ior: 1.44,
-      reflectivity: 0.45,
-      clearcoat: 0.18,
-      clearcoatRoughness: 0.35
+      roughness: 0.52,
+      metalness: 0.05
     });
 
     const fabricTex = createFabricWeaveTexture(shirtColor);
-    const shirtMat = new THREE.MeshPhysicalMaterial({
+    const shirtMat = new THREE.MeshStandardMaterial({
       color: shirtColor,
       map: fabricTex,
-      roughness: 0.78,
-      metalness: 0.02,
-      sheen: 0.35,
-      sheenRoughness: 0.65,
-      sheenColor: new THREE.Color(0xffffff)
+      roughness: 0.75,
+      metalness: 0.02
     });
 
     const pantsTex = createFabricWeaveTexture(pantsColor, 'weave');
-    const pantsMat = new THREE.MeshPhysicalMaterial({
+    const pantsMat = new THREE.MeshStandardMaterial({
       color: pantsColor,
       map: pantsTex,
-      roughness: 0.82,
-      metalness: 0.01,
-      sheen: 0.25,
-      sheenColor: new THREE.Color(0x94a3b8)
+      roughness: 0.80,
+      metalness: 0.01
     });
 
     const leatherShoeMat = new THREE.MeshStandardMaterial({
@@ -1242,64 +1357,99 @@
       metalness: 0.1
     });
 
-    // 1. ANATOMICALLY DETAILED HEAD & FACE
+    // 1. PROPER ANATOMICAL HEAD, VISIBLE EYES & FACIAL FEATURES
     const headGroup = new THREE.Group();
     headGroup.position.set(0, pose === 'sitting' ? 1.18 : 1.56, 0);
 
-    // Cranium & Cheekbones with natural jawline taper
-    const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.108, 24, 24), skinMat);
-    cranium.scale.set(0.92, 1.15, 1.05);
+    // Cranium & Temples (offset backwards to z=-0.018 so facial features sit clearly proud and visible)
+    const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.102, 24, 24), skinMat);
+    cranium.position.set(0, 0.01, -0.018);
+    cranium.scale.set(0.92, 1.12, 1.0);
     cranium.castShadow = true;
     headGroup.add(cranium);
 
-    // Jaw / Chin
-    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.095, 0.085), skinMat);
-    jaw.position.set(0, -0.065, 0.04);
+    // Mid-Face & Cheekbones Structure
+    const cheekGroup = new THREE.Mesh(new THREE.BoxGeometry(0.155, 0.082, 0.092), skinMat);
+    cheekGroup.position.set(0, 0.012, 0.042);
+    headGroup.add(cheekGroup);
+
+    // Anatomical Jawline & Chin
+    const jaw = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.042, 0.095, 12), skinMat);
+    jaw.position.set(0, -0.058, 0.038);
+    jaw.scale.set(1.25, 1.0, 0.85);
     headGroup.add(jaw);
 
-    // Anatomical Nose Bridge & Tip
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.062, 5), skinMat);
-    nose.rotation.x = -Math.PI / 2.3;
-    nose.position.set(0, 0.005, 0.118);
-    headGroup.add(nose);
+    // Pronounced Sculpted Nose
+    const noseBridge = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.048, 0.024), skinMat);
+    noseBridge.position.set(0, 0.018, 0.098);
+    const noseTip = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.032, 8), skinMat);
+    noseTip.rotation.x = -Math.PI / 2.1;
+    noseTip.position.set(0, -0.006, 0.112);
+    headGroup.add(noseBridge, noseTip);
 
-    // Realistic Bilateral Eyeballs with Corneal Depth
-    const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 16), eyeMat);
-    eyeLeft.position.set(-0.035, 0.028, 0.096);
-    eyeLeft.rotation.y = -0.08;
-    const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 16), eyeMat);
-    eyeRight.position.set(0.035, 0.028, 0.096);
-    eyeRight.rotation.y = 0.08;
+    // Natural Philtrum & Lips
+    const upperLip = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.009, 0.016), new THREE.MeshStandardMaterial({ color: 0x9f5145, roughness: 0.45 }));
+    upperLip.position.set(0, -0.035, 0.092);
+    const lowerLip = new THREE.Mesh(new THREE.BoxGeometry(0.040, 0.011, 0.018), new THREE.MeshStandardMaterial({ color: 0xa8584c, roughness: 0.42 }));
+    lowerLip.position.set(0, -0.046, 0.090);
+    headGroup.add(upperLip, lowerLip);
+
+    // CLEAR, PROUD, UNCOVERED BILATERAL EYES (Positioned cleanly forward at z=0.088, rotated to face viewer)
+    const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.015, 16, 16), eyeMat);
+    eyeLeft.position.set(-0.036, 0.024, 0.088);
+    eyeLeft.rotation.y = -Math.PI / 2; // Orient texture iris to face directly forward
+    eyeLeft.scale.set(1.15, 0.95, 1.0);
+
+    const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.015, 16, 16), eyeMat);
+    eyeRight.position.set(0.036, 0.024, 0.088);
+    eyeRight.rotation.y = -Math.PI / 2;
+    eyeRight.scale.set(1.15, 0.95, 1.0);
+
     headGroup.add(eyeLeft, eyeRight);
 
-    // Eyelids & Brow Ridge
-    [-0.035, 0.035].forEach((ex, idx) => {
-      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.012, 0.014), hairMat);
-      brow.position.set(ex, 0.052, 0.104);
-      brow.rotation.z = idx === 0 ? 0.08 : -0.08;
+    // Natural Eyelid Sockets & Brow Arches (Sit cleanly above and around eyes without occluding)
+    [-0.036, 0.036].forEach((ex, idx) => {
+      // Upper Brow Ridge
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.009, 0.016), hairMat);
+      brow.position.set(ex, 0.046, 0.094);
+      brow.rotation.z = idx === 0 ? 0.06 : -0.06;
       headGroup.add(brow);
+
+      // Orbital socket rim
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.017, 0.0035, 8, 16, Math.PI), skinMat);
+      rim.rotation.x = -0.22;
+      rim.position.set(ex, 0.024, 0.086);
+      headGroup.add(rim);
     });
 
-    // Ears
-    [-0.102, 0.102].forEach(ex => {
-      const ear = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.048, 0.032), skinMat);
-      ear.position.set(ex, 0.008, 0.0);
-      ear.rotation.y = ex > 0 ? 0.25 : -0.25;
+    // Anatomical Ears
+    [-0.094, 0.094].forEach(ex => {
+      const ear = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.044, 0.028), skinMat);
+      ear.position.set(ex, 0.012, -0.01);
+      ear.rotation.y = ex > 0 ? 0.22 : -0.22;
       headGroup.add(ear);
     });
 
-    // Layered Volumetric Hair with natural parting & crown volume
+    // High Natural Hairline (Positioned back at z=-0.024 so it NEVER hangs down over the forehead or eyes)
     const hairCrown = new THREE.Mesh(
-      new THREE.SphereGeometry(0.114, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.58),
+      new THREE.SphereGeometry(0.106, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.52),
       hairMat
     );
-    hairCrown.position.set(0, 0.025, -0.01);
-    hairCrown.scale.set(0.96, 1.08, 1.12);
+    hairCrown.position.set(0, 0.032, -0.026);
+    hairCrown.scale.set(0.96, 1.04, 1.02);
     headGroup.add(hairCrown);
 
+    // Hair Back & Sides (Volume along occipital and temporal bones)
+    const hairBack = new THREE.Mesh(
+      new THREE.SphereGeometry(0.104, 18, 18, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.65),
+      hairMat
+    );
+    hairBack.position.set(0, 0.005, -0.032);
+    headGroup.add(hairBack);
+
     if (hasBeard) {
-      const beard = new THREE.Mesh(new THREE.BoxGeometry(0.092, 0.085, 0.065), hairMat);
-      beard.position.set(0, -0.06, 0.062);
+      const beard = new THREE.Mesh(new THREE.BoxGeometry(0.088, 0.076, 0.052), hairMat);
+      beard.position.set(0, -0.062, 0.058);
       headGroup.add(beard);
     }
 
@@ -1913,14 +2063,26 @@
         interactiveScreens.push(screenMesh);
       }
 
-      // Base Pedestal Plinth
-      const plinth = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.42, 0.46, 0.04, 32),
-        kioskDarkAccentMaterial
+      // Soft Contact Ambient Occlusion shadow puddle on floor underneath kiosk
+      const contactAOCanvas = document.createElement('canvas');
+      contactAOCanvas.width = 128;
+      contactAOCanvas.height = 128;
+      const cCtx = contactAOCanvas.getContext('2d');
+      const radGrad = cCtx.createRadialGradient(64, 64, 20, 64, 64, 64);
+      radGrad.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
+      radGrad.addColorStop(0.65, 'rgba(0, 0, 0, 0.35)');
+      radGrad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+      cCtx.fillStyle = radGrad;
+      cCtx.fillRect(0, 0, 128, 128);
+      const contactAOTex = new THREE.CanvasTexture(contactAOCanvas);
+
+      const contactAOMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.2, 1.2),
+        new THREE.MeshBasicMaterial({ map: contactAOTex, transparent: true, opacity: 0.82 })
       );
-      plinth.position.set(0, 0.02, 0);
-      plinth.receiveShadow = true;
-      podGroup.add(plinth);
+      contactAOMesh.rotation.x = -Math.PI / 2;
+      contactAOMesh.position.set(0, 0.002, 0);
+      podGroup.add(contactAOMesh);
 
       scene.add(podGroup);
       kioskGroupList.push(podGroup);
@@ -2307,61 +2469,7 @@
     doorRightMesh.position.x = closedRX + (openRX - closedRX) * doorOpenPercent;
   }
 
-  /* -------------------------------------------------------------
-     Subtle Human Breathing & Touchscreen Interaction Animation
-  ------------------------------------------------------------- */
-  function updateHumanAnimations(elapsed) {
-    humanCharacters.forEach(person => {
-      const ud = person.userData;
-      if (!ud) return;
 
-      // Kiosk interaction tapping animation
-      if (ud.pose === 'touching' && ud.rightArmGroup) {
-        // Natural tapping cycle: periodic tap motion with slight breathing
-        const tapCycle = Math.sin(elapsed * 1.8 + ud.phase);
-        ud.rightArmGroup.rotation.x = -0.55 + Math.max(0, tapCycle) * 0.18;
-        person.position.y = Math.sin(elapsed * 1.2 + ud.phase) * 0.003; // Subtle breathing sway
-      }
-
-      // Sitting person checking phone
-      if (ud.pose === 'sitting') {
-        person.rotation.y = (Math.PI / 2) + Math.sin(elapsed * 0.8) * 0.04;
-      }
-
-      // Dynamic walking characters along waypoints
-      if (ud.pose === 'walking' && ud.path && ud.path.length > 0) {
-        if (ud.targetIndex === undefined) ud.targetIndex = 0;
-        const target = ud.path[ud.targetIndex];
-        const dx = target.x - person.position.x;
-        const dz = target.z - person.position.z;
-        const dist = Math.sqrt(dx * dx + dz * dz);
-
-        if (dist < 0.25) {
-          ud.targetIndex = (ud.targetIndex + 1) % ud.path.length;
-        } else {
-          const moveDist = 0.016 * (ud.speed || 0.8);
-          person.position.x += (dx / dist) * moveDist;
-          person.position.z += (dz / dist) * moveDist;
-
-          // Face movement direction
-          const targetAngle = Math.atan2(dx, dz);
-          person.rotation.y = targetAngle;
-
-          // Leg & arm stride swing
-          const swing = Math.sin(elapsed * 6.5 * (ud.speed || 0.8));
-          person.position.y = Math.abs(Math.sin(elapsed * 6.5)) * 0.02; // Vertical walking bounce
-          if (ud.legs) {
-            ud.legs[0].rotation.x = swing * 0.45;
-            ud.legs[1].rotation.x = -swing * 0.45;
-          }
-          if (ud.arms) {
-            ud.arms[0].rotation.x = -swing * 0.35;
-            ud.arms[1].rotation.x = swing * 0.35;
-          }
-        }
-      }
-    });
-  }
 
   /* -------------------------------------------------------------
      Window Resize & Initialization
@@ -2399,26 +2507,42 @@
     orbitControls.dampingFactor = 0.06;
     orbitControls.enabled = false;
 
-    // Warm Architectural Lighting & Natural Room Bounce
-    ambientLight = new THREE.AmbientLight(0xfff5e8, 0.58);
+    // Physically Balanced Lighting: Warm Room Radiance + Daylight Fill + High-Resolution PBR Shadows
+    ambientLight = new THREE.AmbientLight(0xfff8ef, 0.42);
     scene.add(ambientLight);
 
-    const hemiLight = new THREE.HemisphereLight(0xfef3c7, 0x8c7b68, 0.62);
+    // Hemisphere Light simulating warm ceiling bounce and cool ground bounce
+    const hemiLight = new THREE.HemisphereLight(0xfff1dc, 0x5b6574, 0.48);
     scene.add(hemiLight);
 
-    // Subtle Natural Daylight Fill Coming Through the Front Glass Entrance
-    const entranceFillLight = new THREE.DirectionalLight(0xfff8eb, 0.45);
-    entranceFillLight.position.set(0, 2.8, 8.5);
-    entranceFillLight.target.position.set(0, 1.0, 0);
+    // Sunlight/Daylight streaming through the front glass entrance with soft shadows
+    const entranceFillLight = new THREE.DirectionalLight(0xfffaf0, 0.75);
+    entranceFillLight.position.set(2.5, 5.2, 9.2);
+    entranceFillLight.target.position.set(0, 0.8, 1.5);
+    entranceFillLight.castShadow = true;
+    entranceFillLight.shadow.mapSize.width = 1024;
+    entranceFillLight.shadow.mapSize.height = 1024;
+    entranceFillLight.shadow.camera.near = 1.0;
+    entranceFillLight.shadow.camera.far = 20.0;
+    entranceFillLight.shadow.camera.left = -9.0;
+    entranceFillLight.shadow.camera.right = 9.0;
+    entranceFillLight.shadow.camera.top = 6.0;
+    entranceFillLight.shadow.camera.bottom = -2.0;
+    entranceFillLight.shadow.camera.updateProjectionMatrix();
+    entranceFillLight.shadow.bias = -0.0004;
     scene.add(entranceFillLight, entranceFillLight.target);
 
-    // Warm 3200K Overhead Spotlights Above Each Kiosk Bay
+    // Warm 3200K Overhead Architectural Spotlights Above Each Kiosk Bay
     [-4.6, -1.6, 1.6, 4.6].forEach(sx => {
-      const spot = new THREE.SpotLight(0xffe8c8, 1.15, 9.5, Math.PI / 3.4, 0.55, 1.2);
-      spot.position.set(sx, 3.6, 0.65);
-      spot.target.position.set(sx, 0.9, -0.6);
+      const spot = new THREE.SpotLight(0xffeedb, 1.35, 10.5, Math.PI / 3.2, 0.62, 1.4);
+      spot.position.set(sx, 3.75, 0.55);
+      spot.target.position.set(sx, 0.65, -0.55);
       spot.castShadow = true;
-      spot.shadow.bias = -0.0005;
+      spot.shadow.mapSize.width = 512;
+      spot.shadow.mapSize.height = 512;
+      spot.shadow.camera.near = 0.5;
+      spot.shadow.camera.far = 9.0;
+      spot.shadow.bias = -0.0003;
       scene.add(spot, spot.target);
       mainSpotlights.push(spot);
     });
