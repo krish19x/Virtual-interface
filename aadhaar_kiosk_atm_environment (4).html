@@ -2016,7 +2016,7 @@
         kioskClone.rotation.y = 0;
         kioskClone.rotation.z = 0;
         kioskClone.scale.set(0.01, 0.01, 0.01);
-        kioskClone.position.set(0, 0, 0);
+        kioskClone.position.set(0, -0.005, 0);
 
         kioskClone.traverse((child) => {
           if (child.isMesh) {
@@ -2052,7 +2052,7 @@
           side: THREE.FrontSide
         });
         const screenMesh = new THREE.Mesh(screenGeo, screenMat);
-        screenMesh.position.set(-0.045, 1.385, 0.028);
+        screenMesh.position.set(-0.045, 1.380, 0.028);
         screenMesh.rotation.x = -0.0997; // Exactly -5.71 degrees tilt matching the CAD recess plane
         screenMesh.userData = {
           isScreen: true,
@@ -2063,25 +2063,39 @@
         interactiveScreens.push(screenMesh);
       }
 
-      // Soft Contact Ambient Occlusion shadow puddle on floor underneath kiosk
+      // 3. Precision architectural grounding rim & contact base (snaps cabinet firmly to the vitrified floor)
+      const baseRimGeo = new THREE.BoxGeometry(0.66, 0.016, 0.41);
+      const baseRimMat = new THREE.MeshStandardMaterial({
+        color: 0x111827,
+        roughness: 0.85,
+        metalness: 0.15
+      });
+      const baseRimMesh = new THREE.Mesh(baseRimGeo, baseRimMat);
+      baseRimMesh.position.set(0, 0.007, -0.05);
+      baseRimMesh.receiveShadow = true;
+      podGroup.add(baseRimMesh);
+
+      // Realistic Contact Ambient Occlusion shadow puddle on floor directly under kiosk base footprint
       const contactAOCanvas = document.createElement('canvas');
-      contactAOCanvas.width = 128;
-      contactAOCanvas.height = 128;
+      contactAOCanvas.width = 256;
+      contactAOCanvas.height = 256;
       const cCtx = contactAOCanvas.getContext('2d');
-      const radGrad = cCtx.createRadialGradient(64, 64, 20, 64, 64, 64);
-      radGrad.addColorStop(0, 'rgba(0, 0, 0, 0.72)');
-      radGrad.addColorStop(0.65, 'rgba(0, 0, 0, 0.35)');
+      // Elliptical gradient matching the kiosk base footprint
+      const radGrad = cCtx.createRadialGradient(128, 128, 25, 128, 128, 120);
+      radGrad.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
+      radGrad.addColorStop(0.35, 'rgba(0, 0, 0, 0.75)');
+      radGrad.addColorStop(0.7, 'rgba(0, 0, 0, 0.35)');
       radGrad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
       cCtx.fillStyle = radGrad;
-      cCtx.fillRect(0, 0, 128, 128);
+      cCtx.fillRect(0, 0, 256, 256);
       const contactAOTex = new THREE.CanvasTexture(contactAOCanvas);
 
       const contactAOMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.2, 1.2),
-        new THREE.MeshBasicMaterial({ map: contactAOTex, transparent: true, opacity: 0.82 })
+        new THREE.PlaneGeometry(1.3, 1.05),
+        new THREE.MeshBasicMaterial({ map: contactAOTex, transparent: true, opacity: 0.92 })
       );
       contactAOMesh.rotation.x = -Math.PI / 2;
-      contactAOMesh.position.set(0, 0.002, 0);
+      contactAOMesh.position.set(0, 0.002, -0.05);
       podGroup.add(contactAOMesh);
 
       scene.add(podGroup);
