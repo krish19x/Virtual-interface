@@ -6,8 +6,17 @@
   <title>UIDAI Kiosk Prototype (4:5 Portrait - 400x500mm)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style type="text/tailwindcss">
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    body { font-family: 'Inter', sans-serif; top: 0 !important; position: static !important; }
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+    
+    body { 
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      top: 0 !important; 
+      position: static !important; 
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
     
     /* Hide Google Translate UI elements to keep kiosk clean */
     .skiptranslate { display: none !important; }
@@ -16,795 +25,1140 @@
     .goog-tooltip:hover { display: none !important; }
     .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
     
-    .screen-fade { animation: fadeIn 0.2s ease-out forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .pattern-bg { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 32px 32px; }
+    .screen-fade { animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn { 
+      from { opacity: 0; transform: translateY(6px); } 
+      to { opacity: 1; transform: translateY(0); } 
+    }
+    
+    .pattern-bg { 
+      background-image: radial-gradient(rgba(109, 108, 162, 0.15) 1.5px, transparent 1.5px); 
+      background-size: 28px 28px; 
+    }
+    
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
+    /* Laws of UX Touch Targets: minimum 56px, generous touch padding (Fitts's Law) */
     .menu-card { 
-      @apply text-center p-6 rounded-2xl flex flex-col items-center justify-center gap-4 transition-all shadow-sm cursor-pointer hover:shadow-md; 
+      @apply text-left p-5 rounded-2xl flex items-center gap-4 transition-all duration-150 shadow-sm cursor-pointer border border-slate-200/80 bg-white hover:border-[#6d6ca2]/60 hover:shadow-md active:scale-[0.98] focus:outline-none min-h-[76px]; 
     }
-    .menu-card h2 { @apply text-2xl font-bold text-slate-800 leading-snug; }
+    .menu-card h2 { @apply text-lg font-bold text-slate-800 leading-snug; }
+    .menu-card p { @apply text-xs font-medium text-slate-500 mt-0.5; }
     
     .input-field { 
-      @apply w-full p-4 text-xl font-medium border border-slate-300 rounded-xl focus:outline-none focus:border-[#6d6ca2] focus:ring-1 focus:ring-[#6d6ca2] bg-white transition-all text-slate-800 placeholder-slate-400; 
+      @apply w-full p-3.5 text-base font-semibold border-2 border-slate-200 rounded-xl focus:outline-none focus:border-[#6d6ca2] focus:ring-4 focus:ring-[#6d6ca2]/15 bg-white transition-all text-slate-800 placeholder-slate-400 min-h-[52px]; 
     }
     select.input-field { @apply appearance-none bg-white cursor-pointer; }
 
     .btn-primary { 
-      @apply w-full max-w-sm mx-auto py-4 text-xl font-bold rounded-xl active:scale-[0.98] transition-all shadow-md disabled:shadow-none disabled:active:scale-100; 
+      @apply w-full py-4 px-6 text-lg font-bold rounded-xl active:scale-[0.98] transition-all duration-150 shadow-md hover:shadow-lg disabled:shadow-none disabled:active:scale-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[56px]; 
     }
     .btn-secondary {
-      @apply w-full max-w-sm mx-auto py-4 bg-white text-slate-700 border border-slate-300 text-xl font-bold rounded-xl active:bg-slate-50 transition-all shadow-sm;
+      @apply w-full py-4 px-6 bg-white text-slate-700 border-2 border-slate-200 text-lg font-bold rounded-xl active:bg-slate-50 transition-all shadow-sm hover:border-slate-300 flex items-center justify-center gap-2 min-h-[56px]; 
+    }
+
+    /* Keypad button touch ergonomics */
+    .key-btn {
+      @apply h-14 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-indigo-50 active:border-[#6d6ca2] active:text-[#6d6ca2] shadow-sm transition-all flex items-center justify-center select-none text-slate-800 hover:border-slate-300;
     }
 
     @keyframes attractPulse {
-      0%, 100% { transform: scale(1); box-shadow: 0 10px 25px -5px rgba(109, 108, 162, 0.4); }
-      50% { transform: scale(1.05); box-shadow: 0 25px 50px -12px rgba(109, 108, 162, 0.6); }
+      0%, 100% { transform: scale(1); box-shadow: 0 10px 30px -5px rgba(109, 108, 162, 0.4); }
+      50% { transform: scale(1.04); box-shadow: 0 25px 50px -10px rgba(109, 108, 162, 0.65); }
     }
-    .attract-anim { animation: attractPulse 2s infinite ease-in-out; }
+    .attract-anim { animation: attractPulse 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1); }
   </style>
 </head>
-<body class="bg-slate-900 flex items-center justify-center min-h-screen p-4 sm:p-8">
+<body class="bg-slate-950 flex items-center justify-center min-h-screen p-2 sm:p-6 select-none">
 
 <!-- Hidden Google Translate Element -->
 <div id="google_translate_element" class="hidden"></div>
 
-<div class="hidden bg-indigo-50 border-[#6d6ca2] ring-2 ring-[#6d6ca2] bg-white border-slate-200 bg-[#6d6ca2] text-white bg-slate-300 text-slate-500 border-solid border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-sky-50 hover:border-sky-600 bg-sky-50 bg-sky-100"></div>
+<!-- Fallback Class Cache for Tailwind Dynamic Classes -->
+<div class="hidden bg-indigo-50 border-[#6d6ca2] ring-2 ring-[#6d6ca2] bg-white border-slate-200 bg-[#6d6ca2] text-white bg-slate-300 text-slate-500 border-solid border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-sky-50 hover:border-sky-600 bg-sky-50 bg-sky-100 text-emerald-600 bg-emerald-100 text-amber-700 bg-amber-100"></div>
 
-<!-- Kiosk Bezel (4:5 Portrait / 400mm horizontal x 500mm vertical) -->
-<div class="relative w-full max-w-[640px] aspect-[4/5] bg-black rounded-[3rem] p-4 shadow-2xl flex-shrink-0">
+<!-- Kiosk Bezel (4:5 Portrait / 400mm horizontal x 500mm vertical - Physical Kiosk Standard) -->
+<div class="relative w-full max-w-[580px] aspect-[4/5] bg-gradient-to-b from-slate-800 via-slate-900 to-black rounded-[2.75rem] p-3.5 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.8)] border border-slate-700/50 flex-shrink-0 flex flex-col justify-center">
   
   <!-- Screen container -->
-  <div class="relative w-full h-full bg-[#f5eae7] rounded-[2.25rem] overflow-hidden flex flex-col border border-slate-800">
+  <div class="relative w-full h-full bg-[#f5eae7] rounded-[2.25rem] overflow-hidden flex flex-col border border-slate-800/80 shadow-inner">
     
-    <!-- Top Progress Bar -->
-    <header id="top-progress" class="hidden flex-none bg-white border-b border-slate-200 px-10 py-4 z-20 shadow-sm transition-all duration-300 notranslate">
-       <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-          <div id="progress-fill" class="h-full bg-emerald-500 transition-all duration-700 ease-out" style="width: 25%;"></div>
+    <!-- Top Progress & Status Bar (Jakob's Law & Miller's Law) -->
+    <header id="top-progress" class="hidden flex-none bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-6 py-2.5 z-20 shadow-sm transition-all duration-300 notranslate">
+       <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1.5">
+          <span id="step-label" class="tracking-wide text-slate-600 uppercase flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-[#6d6ca2] animate-pulse"></span>
+            <span id="step-name">Service</span>
+          </span>
+          <span id="step-indicator" class="font-mono text-[#6d6ca2] bg-indigo-50 px-2 py-0.5 rounded-md font-semibold">Aadhaar Portal</span>
+       </div>
+       <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+          <div id="progress-fill" class="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out" style="width: 0%;"></div>
        </div>
     </header>
 
     <!-- Content Area -->
     <main class="flex-1 relative overflow-y-auto no-scrollbar bg-[#f5eae7]">
       
-      <!-- SCREEN 01: Idle -->
-      <div id="screen-01" class="screen absolute inset-0 flex flex-col items-center justify-center pattern-bg bg-[#f5eae7] p-8 screen-fade text-center">
-        <div class="w-32 h-32 bg-[#6d6ca2] rounded-full flex items-center justify-center text-white font-bold text-6xl shadow-lg mb-10 notranslate attract-anim">A</div>
-        <h1 class="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Your Aadhaar Services,<br/>Made Simple</h1>
-        <p class="text-xl text-slate-500 font-medium mb-16">Access and manage your Aadhaar securely.</p>
-        <button onclick="navigateTo('screen-doc-select')" class="btn-primary bg-[#6d6ca2] text-white max-w-xs shadow-lg text-2xl py-5 attract-anim">
-          <span id="tap-to-begin-text" class="transition-opacity duration-500 notranslate block">TAP TO BEGIN</span>
-        </button>
-      </div>
-
-      <!-- SCREEN DOC SELECT: Choose Service (4 grid options) -->
-      <div id="screen-doc-select" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center">
-        <div class="mb-12 text-center">
-          <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Select a Document Service</h1>
-          <p class="text-xl font-medium text-slate-600">Which document would you like to access today?</p>
+      <!-- SCREEN 01: Attract Screen (Aesthetic-Usability Effect, Doherty Threshold) -->
+      <div id="screen-01" class="screen absolute inset-0 flex flex-col items-center justify-between pattern-bg bg-[#f5eae7] p-8 screen-fade text-center">
+        <!-- Top branding badge -->
+        <div class="w-full flex justify-between items-center pt-2">
+           <div class="flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1 rounded-full border border-slate-200/60 shadow-xs">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Touch Kiosk Online</span>
+           </div>
+           <div class="text-xs font-bold text-slate-400 font-mono">UIDAI KIOSK v2.4</div>
         </div>
 
-        <div class="grid grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
-          <!-- Aadhaar (Active) -->
-          <button onclick="navigateTo('screen-02')" class="menu-card bg-white border border-slate-200 py-12 hover:border-[#6d6ca2] hover:shadow-lg transition-all group">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 group-hover:bg-indigo-50 transition-colors notranslate">🆔</div>
-            <h2 class="text-3xl font-bold text-slate-800">Aadhaar</h2>
+        <!-- Center Hero -->
+        <div class="flex flex-col items-center my-auto">
+          <div class="w-28 h-28 bg-gradient-to-tr from-[#58578c] to-[#6d6ca2] rounded-3xl flex items-center justify-center text-white font-extrabold text-5xl shadow-xl mb-6 notranslate attract-anim border-2 border-white/40">
+            A
+          </div>
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight leading-tight">
+            Aadhaar Self-Service Kiosk
+          </h1>
+          <p class="text-base text-slate-600 font-medium max-w-xs leading-relaxed">
+            Fast, secure and verified government identity services for all citizens.
+          </p>
+          
+          <div class="flex items-center gap-2 mt-4 px-3 py-1 bg-white/60 rounded-full border border-slate-200/50 text-xs text-slate-500 font-semibold">
+            <span>Verified Security</span>
+            <span>•</span>
+            <span>Instant OTP</span>
+          </div>
+        </div>
+
+        <!-- Primary Call to Action (Fitts's Law: High target size, bottom thumb accessible) -->
+        <div class="w-full pb-4">
+          <button onclick="navigateTo('screen-doc-select')" class="btn-primary bg-gradient-to-r from-[#6d6ca2] to-[#58578c] text-white shadow-xl text-xl py-4.5 rounded-2xl attract-anim group">
+            <span id="tap-to-begin-text" class="transition-opacity duration-300 notranslate block tracking-wide">TAP TO BEGIN</span>
+            <span class="text-2xl group-hover:translate-x-1 transition-transform notranslate">→</span>
+          </button>
+          <p class="text-[11px] text-slate-400 font-medium mt-2.5 notranslate">Touch the screen anywhere or tap the button to start</p>
+        </div>
+      </div>
+
+      <!-- SCREEN DOC SELECT: Choose Document Service (Hick's Law: 4 simple cards) -->
+      <div id="screen-doc-select" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-2 text-center">
+          <span class="inline-block px-3 py-1 bg-indigo-50 border border-indigo-200/60 rounded-full text-xs font-bold text-[#6d6ca2] uppercase tracking-wider mb-2">Step 1 of 3</span>
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Select Document Service</h1>
+          <p class="text-sm font-medium text-slate-600">Which identity document would you like to access today?</p>
+        </div>
+
+        <!-- 2x2 Grid with high contrast affordance -->
+        <div class="grid grid-cols-2 gap-3.5 my-auto w-full">
+          <!-- Aadhaar (Active - Von Restorff Effect) -->
+          <button onclick="navigateTo('screen-02')" class="menu-card bg-white border-2 border-indigo-200/80 p-5 hover:border-[#6d6ca2] hover:shadow-lg transition-all flex flex-col items-start gap-2.5 rounded-2xl group relative overflow-hidden bg-gradient-to-br from-white to-indigo-50/30">
+            <div class="absolute top-3 right-3 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider">Active</div>
+            <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-[#6d6ca2] group-hover:bg-[#6d6ca2] group-hover:text-white transition-colors notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg></div>
+            <div>
+              <h2 class="text-xl font-bold text-slate-900 group-hover:text-[#6d6ca2] transition-colors">Aadhaar</h2>
+              <p class="text-xs text-slate-500 font-medium mt-0.5">Download, update, PVC order & biometrics</p>
+            </div>
           </button>
           
           <!-- PAN Card (Inactive) -->
-          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">💳</div>
-            <h2 class="text-3xl text-slate-500 font-bold">PAN Card</h2>
-            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
+          <div class="menu-card bg-white/60 border border-slate-200/80 p-5 opacity-60 cursor-not-allowed flex flex-col items-start gap-2.5 rounded-2xl">
+            <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div>
+            <div>
+              <h2 class="text-xl font-bold text-slate-600">PAN Card</h2>
+              <span class="inline-block text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded mt-1">Coming Soon</span>
+            </div>
           </div>
 
           <!-- Passport (Inactive) -->
-          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">🛂</div>
-            <h2 class="text-3xl text-slate-500 font-bold">Passport</h2>
-            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
+          <div class="menu-card bg-white/60 border border-slate-200/80 p-5 opacity-60 cursor-not-allowed flex flex-col items-start gap-2.5 rounded-2xl">
+            <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+            <div>
+              <h2 class="text-xl font-bold text-slate-600">Passport</h2>
+              <span class="inline-block text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded mt-1">Coming Soon</span>
+            </div>
           </div>
 
           <!-- Ayushman (Inactive) -->
-          <div class="menu-card bg-white/50 border border-slate-200 py-12 opacity-70 cursor-not-allowed">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl mb-4 notranslate grayscale">🏥</div>
-            <h2 class="text-3xl text-slate-500 font-bold">Ayushman</h2>
-            <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Coming Soon</span>
+          <div class="menu-card bg-white/60 border border-slate-200/80 p-5 opacity-60 cursor-not-allowed flex flex-col items-start gap-2.5 rounded-2xl">
+            <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
+            <div>
+              <h2 class="text-xl font-bold text-slate-600">Ayushman</h2>
+              <span class="inline-block text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded mt-1">Coming Soon</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- SCREEN 02: Language Selection (notranslate to preserve language names) -->
-      <div id="screen-02" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center notranslate">
-        <div class="mb-10 mt-6 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900">Choose your preferred language</h1>
-        </div>
-        <div class="grid grid-cols-3 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectLanguageCard(this, 'en')" class="menu-card bg-white border border-slate-200 py-10"><h2>English</h2></button>
-          <button onclick="selectLanguageCard(this, 'hi')" class="menu-card bg-white border border-slate-200 py-10"><h2>हिंदी</h2></button>
-          <button onclick="selectLanguageCard(this, 'mr')" class="menu-card bg-white border border-slate-200 py-10"><h2>मराठी</h2></button>
-          <button onclick="selectLanguageCard(this, 'gu')" class="menu-card bg-white border border-slate-200 py-10"><h2>ગુજરાતી</h2></button>
-          <button onclick="selectLanguageCard(this, 'bn')" class="menu-card bg-white border border-slate-200 py-10"><h2>বাংলা</h2></button>
-          <button onclick="selectLanguageCard(this, 'ta')" class="menu-card bg-white border border-slate-200 py-10"><h2>தமிழ்</h2></button>
-        </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+        <div class="text-center pb-2">
+           <p class="text-xs text-slate-400 font-medium">Select Aadhaar to proceed to language choices</p>
         </div>
       </div>
 
-      <!-- SCREEN 03: Main Service Menu -->
-      <div id="screen-03" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">My Aadhaar Services</h1>
-          <p class="text-lg text-slate-600 font-medium">What would you like to do today?</p>
+      <!-- SCREEN 02: Language Selection (Jakob's Law: Recognizable Native Scripts) -->
+      <div id="screen-02" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between notranslate">
+        <div class="mt-2 text-center">
+          <span class="inline-block px-3 py-1 bg-indigo-50 border border-indigo-200/60 rounded-full text-xs font-bold text-[#6d6ca2] uppercase tracking-wider mb-2">Step 2 of 3</span>
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Choose Language / भाषा चुनें</h1>
+          <p class="text-sm font-medium text-slate-600">The entire screen will translate to your chosen language.</p>
         </div>
-        <div class="grid grid-cols-3 gap-8 mb-10 max-w-5xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'screen-04')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2 class="text-3xl">Get Aadhaar</h2>
+
+        <div class="grid grid-cols-2 gap-3 my-auto w-full">
+          <button onclick="selectLanguageCard(this, 'en')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-3">
+             <div class="w-10 h-10 rounded-xl bg-slate-100 text-[#6d6ca2] font-black flex items-center justify-center text-base">EN</div>
+             <div>
+               <h2 class="text-lg font-bold">English</h2>
+               <p class="text-xs text-slate-400">Default</p>
+             </div>
           </button>
-          <button onclick="selectCard(this, 'screen-05')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2 class="text-3xl">Update Details</h2>
+          
+          <button onclick="selectLanguageCard(this, 'hi')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-3">
+             <div class="w-10 h-10 rounded-xl bg-slate-100 text-[#6d6ca2] font-black flex items-center justify-center text-base">हि</div>
+             <div>
+               <h2 class="text-lg font-bold">हिंदी</h2>
+               <p class="text-xs text-slate-400">Hindi</p>
+             </div>
           </button>
-          <button onclick="selectCard(this, 'screen-06')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2 class="text-3xl">Status & Security</h2>
+          
+          <button onclick="selectLanguageCard(this, 'mr')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-3">
+             <div class="w-10 h-10 rounded-xl bg-slate-100 text-[#6d6ca2] font-black flex items-center justify-center text-base">म</div>
+             <div>
+               <h2 class="text-lg font-bold">मराठी</h2>
+               <p class="text-xs text-slate-400">Marathi</p>
+             </div>
+          </button>
+          
+          <button onclick="selectLanguageCard(this, 'gu')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-3">
+             <div class="w-10 h-10 rounded-xl bg-slate-100 text-[#6d6ca2] font-black flex items-center justify-center text-base">ગુ</div>
+             <div>
+               <h2 class="text-lg font-bold">ગુજરાતી</h2>
+               <p class="text-xs text-slate-400">Gujarati</p>
+             </div>
+          </button>
+          
+          <button onclick="selectLanguageCard(this, 'bn')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-3">
+             <div class="w-10 h-10 rounded-xl bg-slate-100 text-[#6d6ca2] font-black flex items-center justify-center text-base">বা</div>
+             <div>
+               <h2 class="text-lg font-bold">বাংলা</h2>
+               <p class="text-xs text-slate-400">Bengali</p>
+             </div>
+          </button>
+          
+          <button onclick="selectLanguageCard(this, 'ta')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-3">
+             <div class="w-10 h-10 rounded-xl bg-slate-100 text-[#6d6ca2] font-black flex items-center justify-center text-base">த</div>
+             <div>
+               <h2 class="text-lg font-bold">தமிழ்</h2>
+               <p class="text-xs text-slate-400">Tamil</p>
+             </div>
           </button>
         </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+
+        <div class="pb-2">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500 rounded-2xl">
+            <span>Continue in Selected Language</span>
+            <span class="text-xl notranslate">→</span>
+          </button>
         </div>
       </div>
 
-      <!-- SCREEN 04: Get Aadhaar Menu -->
-      <div id="screen-04" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Get Aadhaar</h1>
-          <p class="text-lg text-slate-600 font-medium">Choose what you would like to do.</p>
+      <!-- SCREEN 03: Main Service Hub (Miller's Law: 3 distinct chunks) -->
+      <div id="screen-03" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">My Aadhaar Services</h1>
+          <p class="text-sm font-medium text-slate-600">Select the service category you need.</p>
         </div>
-        <div class="grid grid-cols-3 gap-8 mb-10 max-w-5xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'auth:screen-08')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2>Download Aadhaar (PDF)</h2>
+
+        <div class="flex flex-col gap-3 my-auto w-full">
+          <!-- Get Aadhaar -->
+          <button onclick="selectCard(this, 'screen-04')" class="menu-card bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 group">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-[#6d6ca2] flex items-center justify-center group-hover:bg-[#6d6ca2] group-hover:text-white transition-colors notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+            <div class="flex-1">
+              <h2 class="text-xl font-bold text-slate-900 group-hover:text-[#6d6ca2] transition-colors">Get Aadhaar</h2>
+              <p class="text-xs text-slate-500 font-medium">Download digital e-Aadhaar PDF or order PVC card</p>
+            </div>
+            <span class="text-xl font-bold text-slate-300 group-hover:text-[#6d6ca2] notranslate">→</span>
           </button>
-          <button onclick="selectCard(this, 'auth:screen-10')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2>Order Aadhaar PVC Card</h2>
+
+          <!-- Update Details -->
+          <button onclick="selectCard(this, 'screen-05')" class="menu-card bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 group">
+            <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-colors notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></div>
+            <div class="flex-1">
+              <h2 class="text-xl font-bold text-slate-900 group-hover:text-amber-600 transition-colors">Update Aadhaar Details</h2>
+              <p class="text-xs text-slate-500 font-medium">Update address, demographic details, or biometrics</p>
+            </div>
+            <span class="text-xl font-bold text-slate-300 group-hover:text-amber-600 notranslate">→</span>
           </button>
-          <button onclick="selectCard(this, 'screen-11')" class="menu-card bg-white border border-slate-200 h-full min-h-[200px]">
-            <h2>Check PVC Card Status</h2>
+
+          <!-- Status & Security -->
+          <button onclick="selectCard(this, 'screen-06')" class="menu-card bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 group">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
+            <div class="flex-1">
+              <h2 class="text-xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">Status & Security</h2>
+              <p class="text-xs text-slate-500 font-medium">Check request status, lock biometrics or generate VID</p>
+            </div>
+            <span class="text-xl font-bold text-slate-300 group-hover:text-emerald-600 notranslate">→</span>
           </button>
         </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+
+        <div class="pb-2">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500 rounded-2xl">Continue</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 04: Get Aadhaar Submenu -->
+      <div id="screen-04" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Get Aadhaar</h1>
+          <p class="text-sm font-medium text-slate-600">Choose how you wish to receive your Aadhaar.</p>
+        </div>
+
+        <div class="flex flex-col gap-3 my-auto w-full">
+          <button onclick="selectCard(this, 'auth:screen-08')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-4 group">
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 text-[#6d6ca2] flex items-center justify-center notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>
+            <div class="flex-1">
+              <h2 class="text-lg font-bold">Download e-Aadhaar (PDF)</h2>
+              <p class="text-xs text-slate-500">Delivered instantly to registered WhatsApp & email (Free)</p>
+            </div>
+          </button>
+
+          <button onclick="selectCard(this, 'auth:screen-10')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-4 group">
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 text-[#6d6ca2] flex items-center justify-center notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div>
+            <div class="flex-1">
+              <h2 class="text-lg font-bold">Order Aadhaar PVC Card</h2>
+              <p class="text-xs text-slate-500">Durable plastic card delivered to address (₹50 Fee)</p>
+            </div>
+          </button>
+
+          <button onclick="selectCard(this, 'screen-11')" class="menu-card bg-white border border-slate-200 p-4.5 rounded-2xl flex items-center gap-4 group">
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 text-[#6d6ca2] flex items-center justify-center notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>
+            <div class="flex-1">
+              <h2 class="text-lg font-bold">Check PVC Card Status</h2>
+              <p class="text-xs text-slate-500">Track delivery status using SRN</p>
+            </div>
+          </button>
+        </div>
+
+        <div class="pb-2">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500 rounded-2xl">Continue</button>
         </div>
       </div>
 
       <!-- SCREEN 05: Update Details Menu -->
-      <div id="screen-05" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Aadhaar Details</h1>
-          <p class="text-lg text-slate-600 font-medium">Select the information you wish to update.</p>
+      <div id="screen-05" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Update Aadhaar Details</h1>
+          <p class="text-sm font-medium text-slate-600">Select what you would like to update.</p>
         </div>
-        <div class="grid grid-cols-2 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'auth:screen-12-input')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Address Update</h2>
+
+        <div class="grid grid-cols-2 gap-2.5 my-auto w-full">
+          <!-- Address Update -->
+          <button onclick="selectCard(this, 'auth:screen-12-input')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-start gap-1.5">
+            <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6 inline-block -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>
+            <div>
+              <h2 class="text-base font-bold">Address Update</h2>
+              <p class="text-xs text-slate-500">Update house, locality or pin</p>
+            </div>
           </button>
-          <button onclick="selectCard(this, 'auth:screen-13')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Demographic Data (Name/DOB/Gender)</h2>
+
+          <!-- Demographic Data -->
+          <button onclick="selectCard(this, 'auth:screen-13')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-start gap-1.5">
+            <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span>
+            <div>
+              <h2 class="text-base font-bold">Demographic Data</h2>
+              <p class="text-xs text-slate-500">Name, Date of Birth, Gender</p>
+            </div>
           </button>
-          <button onclick="selectCard(this, 'auth:screen-14')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Document Update (POI/POA)</h2>
+
+          <!-- Biometrics Update -->
+          <button onclick="selectCard(this, 'auth:screen-biometric-update')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-start gap-1.5">
+            <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 004 11m12 0c0 1.254-.153 2.47-.442 3.633"/></svg></span>
+            <div>
+              <h2 class="text-base font-bold">Biometrics Data</h2>
+              <p class="text-xs text-slate-500">Fingerprints, Iris, Live Photo</p>
+            </div>
           </button>
-          <button onclick="selectCard(this, 'screen-15')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Check Update Status</h2>
+
+          <!-- Document Update -->
+          <button onclick="selectCard(this, 'auth:screen-14')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-start gap-1.5">
+            <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg></span>
+            <div>
+              <h2 class="text-base font-bold">Document Update</h2>
+              <p class="text-xs text-slate-500">Upload fresh POI & POA</p>
+            </div>
+          </button>
+
+          <!-- Check Status -->
+          <button onclick="selectCard(this, 'screen-15')" class="menu-card bg-white border border-slate-200 p-3.5 rounded-2xl col-span-2 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></span>
+              <div class="text-left">
+                <h2 class="text-base font-bold">Check Update Status</h2>
+                <p class="text-xs text-slate-500">Track an existing update using URN</p>
+              </div>
+            </div>
+            <span class="text-lg text-slate-300 font-bold notranslate">→</span>
           </button>
         </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+
+        <div class="pb-2">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500 rounded-2xl">Continue</button>
         </div>
       </div>
 
-      <!-- SCREEN 06: Status & Security Menu -->
-      <div id="screen-06" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Status & Security</h1>
-          <p class="text-lg text-slate-600 font-medium">Manage and protect your Aadhaar.</p>
+      <!-- SCREEN 06: Status & Security Submenu -->
+      <div id="screen-06" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Status & Security</h1>
+          <p class="text-sm font-medium text-slate-600">Protect and manage your biometric & card access.</p>
         </div>
-        <div class="grid grid-cols-2 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'screen-15')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Check Enrolment & Update Status</h2>
+
+        <div class="grid grid-cols-2 gap-3 my-auto w-full">
+          <button onclick="selectCard(this, 'screen-15')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-start gap-2">
+            <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></span>
+            <div>
+              <h2 class="text-base font-bold">Track Request</h2>
+              <p class="text-xs text-slate-500">Status of enrollment or update</p>
+            </div>
           </button>
-          <button onclick="selectCard(this, 'auth:screen-16')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Lock / Unlock Aadhaar</h2>
+
+          <button onclick="selectCard(this, 'auth:screen-16')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-start gap-2">
+            <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></span>
+            <div>
+              <h2 class="text-base font-bold">Lock Aadhaar</h2>
+              <p class="text-xs text-slate-500">Disable all authentication</p>
+            </div>
           </button>
-          <button onclick="selectCard(this, 'auth:screen-17')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Lock / Unlock Biometrics</h2>
+
+          <button onclick="selectCard(this, 'auth:screen-17')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-start gap-2">
+            <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></span>
+            <div>
+              <h2 class="text-base font-bold">Lock Biometrics</h2>
+              <p class="text-xs text-slate-500">Protect fingerprints & iris</p>
+            </div>
           </button>
-          <button onclick="selectCard(this, 'auth:screen-18')" class="menu-card bg-white border border-slate-200 min-h-[160px]">
-            <h2>Virtual ID (VID) Generator</h2>
+
+          <button onclick="selectCard(this, 'auth:screen-18')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-start gap-2">
+            <span class="text-xs font-mono font-black text-[#6d6ca2] border-2 border-[#6d6ca2] px-1.5 py-0.5 rounded notranslate">VID</span>
+            <div>
+              <h2 class="text-base font-bold">Generate VID</h2>
+              <p class="text-xs text-slate-500">16-digit Virtual Identity</p>
+            </div>
           </button>
         </div>
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+
+        <div class="pb-2">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500 rounded-2xl">Continue</button>
         </div>
       </div>
 
-      <!-- SCREEN 07: Authentication (Dynamic 3-Step) -->
-      <div id="screen-07" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-8 mt-2 text-center">
-          <h1 id="auth-title" class="text-3xl font-extrabold text-slate-900 mb-2">Verify your identity</h1>
-          <p id="auth-subtitle" class="text-lg text-slate-600 font-medium">Enter the last 4 digits of your Aadhaar Number.</p>
+      <!-- SCREEN 07: Dynamic 3-Step Authentication (Miller's Law, Fitts's Law, Jakob's Law Keypad) -->
+      <div id="screen-07" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-1 text-center">
+          <span class="inline-block px-3 py-0.5 bg-indigo-50 border border-indigo-200 rounded-full text-[11px] font-bold text-[#6d6ca2] uppercase tracking-wider mb-1" id="auth-step-badge">Security Verification</span>
+          <h1 id="auth-title" class="text-2xl font-extrabold text-slate-900 mb-0.5">Verify your identity</h1>
+          <p id="auth-subtitle" class="text-sm text-slate-600 font-medium">Enter the last 4 digits of your Aadhaar Number.</p>
         </div>
         
-        <div id="auth-input-container" class="flex justify-center items-center mb-8 bg-white border-2 border-slate-300 rounded-2xl shadow-inner max-w-lg mx-auto py-6 min-h-[104px] notranslate">
-          <!-- Populated dynamically via JS based on authStep -->
+        <!-- Input display chunk (Miller's Law) -->
+        <div id="auth-input-container" class="flex justify-center items-center my-auto bg-white border-2 border-indigo-100 rounded-2xl shadow-inner max-w-sm mx-auto py-3 px-4 min-h-[74px] notranslate">
+          <!-- Populated dynamically via JS -->
         </div>
 
-        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center mb-8 max-w-sm mx-auto">
-          <p class="text-sm text-slate-500 font-medium">Data is securely processed and not stored locally.</p>
-        </div>
-
-        <!-- Keypad (Landscape format, compacted) -->
-        <div class="grid grid-cols-5 gap-3 max-w-lg mx-auto w-full mb-4 notranslate">
-          <button onclick="typePin('1')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">1</button>
-          <button onclick="typePin('2')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">2</button>
-          <button onclick="typePin('3')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">3</button>
-          <button onclick="typePin('4')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">4</button>
-          <button onclick="typePin('5')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">5</button>
-          <button onclick="typePin('6')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">6</button>
-          <button onclick="typePin('7')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">7</button>
-          <button onclick="typePin('8')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">8</button>
-          <button onclick="typePin('9')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">9</button>
-          <button onclick="typePin('0')" class="p-4 text-2xl font-bold bg-white border border-slate-200 rounded-xl active:bg-slate-100 shadow-sm">0</button>
+        <!-- Touch Numpad (Ergonomic 3x4 layout for kiosk) -->
+        <div class="w-full max-w-xs mx-auto mb-1 notranslate">
+          <div class="grid grid-cols-3 gap-2 mb-2">
+            <button onclick="typePin('1')" class="key-btn">1</button>
+            <button onclick="typePin('2')" class="key-btn">2</button>
+            <button onclick="typePin('3')" class="key-btn">3</button>
+            <button onclick="typePin('4')" class="key-btn">4</button>
+            <button onclick="typePin('5')" class="key-btn">5</button>
+            <button onclick="typePin('6')" class="key-btn">6</button>
+            <button onclick="typePin('7')" class="key-btn">7</button>
+            <button onclick="typePin('8')" class="key-btn">8</button>
+            <button onclick="typePin('9')" class="key-btn">9</button>
+            <button onclick="typePin('clear')" class="key-btn text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200">CLEAR</button>
+            <button onclick="typePin('0')" class="key-btn">0</button>
+            <button onclick="typePin('del')" class="key-btn text-xl text-slate-600 bg-slate-100 hover:bg-slate-200">⌫</button>
+          </div>
           
-          <button onclick="typePin('clear')" class="col-span-1 p-4 text-lg font-bold bg-slate-200 border border-slate-300 rounded-xl active:bg-slate-300 text-slate-700 transition-colors translate">Clear</button>
-          <button onclick="typePin('del')" class="col-span-1 p-4 text-2xl font-bold bg-slate-200 border border-slate-300 rounded-xl active:bg-slate-300 text-slate-700 transition-colors">⌫</button>
-          <button id="auth-btn" disabled onclick="submitAuth()" class="col-span-3 p-4 text-lg font-bold bg-slate-300 text-slate-500 rounded-xl transition-colors translate">Continue</button>
+          <button id="auth-btn" disabled onclick="submitAuth()" class="btn-primary bg-slate-300 text-slate-500 rounded-xl w-full py-3 text-base">
+            <span>Continue</span>
+            <span class="text-lg notranslate">→</span>
+          </button>
         </div>
       </div>
 
-      <!-- SCREEN 08: Get Digital Copy -->
-      <div id="screen-08" class="screen hidden absolute inset-0 flex flex-col items-center justify-center p-10 bg-[#f5eae7] screen-fade text-center">
-        <h1 class="text-4xl font-extrabold text-slate-900 mb-8">Download Aadhaar</h1>
-        <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm mb-10 max-w-lg w-full">
-          <p class="text-xl font-medium text-slate-600 mb-4">Your digital copy will be securely sent to:</p>
-          <h2 class="text-2xl font-bold text-slate-900 mb-2">Registered Mobile (WhatsApp)</h2>
-          <p class="text-3xl font-bold text-slate-800 tracking-wide notranslate">+91 XXXXX 12345</p>
-          <div class="mt-6 flex items-center justify-center gap-3">
-             <input type="checkbox" id="masked-aadhaar" class="w-6 h-6 rounded border-slate-300 text-[#6d6ca2] focus:ring-[#6d6ca2]">
-             <label for="masked-aadhaar" class="text-lg font-medium text-slate-700">Download Masked Aadhaar?</label>
+      <!-- SCREEN 08: Download Aadhaar (Peak-End Rule: Clear confirmation) -->
+      <div id="screen-08" class="screen hidden absolute inset-0 flex flex-col items-center justify-between p-6 bg-[#f5eae7] screen-fade text-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Download e-Aadhaar</h1>
+          <p class="text-sm font-medium text-slate-600">Your password-protected digital card is ready.</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-3xl p-6 text-center shadow-sm my-auto max-w-sm w-full">
+          <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
+          <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Delivering via WhatsApp & SMS</p>
+          <p class="text-2xl font-black text-slate-900 tracking-wider mb-3 notranslate">+91 XXXXX 12345</p>
+          <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs text-slate-600 font-medium text-left">
+            <span class="font-bold text-slate-800">Password format:</span> First 4 letters of your name in CAPITAL + Birth Year (e.g., RAHU1990).
           </div>
         </div>
-        <div class="flex gap-4 w-full max-w-lg">
-          <button onclick="goBack()" class="btn-secondary">Cancel</button>
-          <button onclick="navigateTo('screen-09')" class="btn-primary bg-[#6d6ca2] text-white m-0">Send PDF</button>
+
+        <div class="w-full pb-2">
+          <button onclick="confirmAction('e-Aadhaar Sent Successfully', 'A download link with your encrypted PDF has been sent to +91 XXXXX 12345.', false)" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">
+            Send to WhatsApp Now
+          </button>
         </div>
       </div>
 
-      <!-- SCREEN 09: Digital Copy Confirmation -->
-      <div id="screen-09" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade items-center justify-center text-center">
-        <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Request Processed</h1>
-        <p class="text-xl font-medium text-slate-600 mb-10 max-w-lg">Your Aadhaar PDF has been successfully generated and delivered to your registered number.</p>
-        
-        <div class="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-center mb-12 max-w-lg">
-          <p class="text-base text-slate-600 font-medium">Ensure your device is secure before opening the document. Password is 8 characters (first 4 letters of name + YYYY).</p>
+      <!-- SCREEN 09: Standalone Request Completed -->
+      <div id="screen-09" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade items-center justify-between text-center">
+        <div class="my-auto max-w-sm w-full flex flex-col items-center">
+          <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4 shadow-sm notranslate"><svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-2">Transaction Completed</h1>
+          <p class="text-sm font-medium text-slate-600 leading-relaxed">Your request has been successfully recorded in the central UIDAI registry.</p>
         </div>
-
-        <button onclick="goHome()" class="btn-secondary">Return to Services</button>
+        <div class="w-full pb-2">
+          <button onclick="goHome()" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">Return to Home</button>
+        </div>
       </div>
 
       <!-- SCREEN 10: Order PVC Card -->
-      <div id="screen-10" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-8 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Order Aadhaar PVC Card</h1>
-          <div class="flex items-center justify-center gap-4 text-base font-semibold text-slate-400">
-             <span class="text-[#6d6ca2]">1. Verify Details</span> <span class="notranslate">-</span> <span>2. Payment (₹50)</span>
-          </div>
+      <div id="screen-10" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Order PVC Card</h1>
+          <p class="text-sm font-medium text-slate-600">Review card specifications and delivery address.</p>
         </div>
-        
-        <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm mb-8 max-w-2xl mx-auto w-full text-left">
-          <h3 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-6">Demographic Preview</h3>
-          <div class="grid grid-cols-2 gap-6 mb-6">
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm my-auto max-w-md w-full mx-auto text-left">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Preview Card</span>
+             <span class="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Security QR Included</span>
+          </div>
+          <div class="grid grid-cols-2 gap-4 mb-3">
             <div>
-              <p class="text-sm text-slate-500 uppercase font-bold mb-1">Name</p>
-              <p class="text-xl font-bold text-slate-900 notranslate">Rahul Sharma</p>
+              <p class="text-[11px] text-slate-400 font-bold uppercase">Name</p>
+              <p class="text-base font-bold text-slate-900 notranslate">Rahul Sharma</p>
             </div>
             <div>
-              <p class="text-sm text-slate-500 uppercase font-bold mb-1">Aadhaar Number</p>
-              <p class="text-xl font-bold text-slate-900 tracking-widest notranslate">XXXX XXXX 1234</p>
+              <p class="text-[11px] text-slate-400 font-bold uppercase">Aadhaar Number</p>
+              <p class="text-base font-bold text-slate-900 tracking-wider notranslate">XXXX XXXX 1234</p>
             </div>
           </div>
           <div>
-            <p class="text-sm text-slate-500 uppercase font-bold mb-1">Delivery Address</p>
-            <p class="text-lg font-medium text-slate-700 leading-snug notranslate">Flat 402, Block B, Green Valley Apts,<br/>Andheri East, Mumbai, 400069, Maharashtra</p>
+            <p class="text-[11px] text-slate-400 font-bold uppercase">Speed Post Delivery Address</p>
+            <p class="text-xs font-semibold text-slate-700 leading-relaxed notranslate mt-0.5">Flat 402, Block B, Green Valley Apts, Andheri East, Mumbai, 400069, Maharashtra</p>
           </div>
         </div>
 
-        <button onclick="confirmAction('PVC Card Ordered', 'Order SRN: SRN8472938475. Payment Successful.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
-          Proceed to Payment (₹50)
-        </button>
+        <div class="pb-2">
+          <button onclick="confirmAction('PVC Card Ordered', 'Order SRN: SRN8472938475. Payment Successful.', true, '₹50.00')" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">
+            Proceed to Payment (₹50)
+          </button>
+        </div>
       </div>
 
-      <!-- SCREEN 11 / 15: Check Status -->
-      <div id="screen-11" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-8 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Check Request Status</h1>
-          <p class="text-lg font-medium text-slate-600">Enter your Service Request Number (SRN/URN).</p>
+      <!-- SCREEN 11: Check PVC Status (Jakob's Law) -->
+      <div id="screen-11" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Check Request Status</h1>
+          <p class="text-sm font-medium text-slate-600">Enter your Service Request Number (SRN / URN).</p>
         </div>
 
-        <input type="text" placeholder="Enter SRN / URN" value="SRN8472938475" readonly class="input-field max-w-xl mx-auto text-center notranslate" />
-
-        <div class="flex-1 bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center mb-8 max-w-3xl mx-auto w-full shadow-inner">
-           <span class="text-slate-400 font-bold text-xl">[ Touch Keyboard Area ]</span>
+        <div class="my-auto max-w-sm w-full mx-auto">
+          <input type="text" placeholder="Enter SRN / URN" value="SRN8472938475" readonly class="input-field text-center font-mono text-lg font-bold tracking-wider notranslate mb-4" />
+          <div class="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-500 font-medium">
+            Demo SRN auto-loaded for instant verification.
+          </div>
         </div>
 
-        <button onclick="showStatusTimeline()" class="btn-primary bg-[#6d6ca2] text-white mb-4">Check Status</button>
+        <div class="pb-2">
+          <button onclick="showStatusTimeline()" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">Check Status</button>
+        </div>
       </div>
 
       <!-- SCREEN 12-INPUT: Address Update Form -->
-      <div id="screen-12-input" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-6 mt-2 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Address</h1>
-          <p class="text-lg font-medium text-slate-600">Fill in the details as per your Proof of Address (POA) document.</p>
+      <div id="screen-12-input" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-1 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-0.5">Update Address</h1>
+          <p class="text-xs font-medium text-slate-600">Fill in details as per your Proof of Address (POA) document.</p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 max-w-4xl mx-auto w-full flex-1 overflow-y-auto pr-4 mb-4 pb-4">
-           <input type="text" id="addr-co" class="input-field col-span-2" placeholder="Care of (C/o)">
-           <input type="text" id="addr-house" class="input-field" placeholder="House/Bldg/Apt">
-           <input type="text" id="addr-street" class="input-field" placeholder="Street/Road/Lane">
-           <input type="text" id="addr-area" class="input-field" placeholder="Area/Locality/Sector">
-           <input type="text" id="addr-landmark" class="input-field" placeholder="Landmark">
-           <input type="text" id="addr-pincode" class="input-field" placeholder="Pincode">
-           <input type="text" id="addr-city" class="input-field" placeholder="Village/Town/City">
-           <input type="text" id="addr-district" class="input-field" placeholder="District">
-           <input type="text" id="addr-state" class="input-field" placeholder="State">
-           <!-- Document Upload for Address (POA) -->
-           <div class="col-span-2 mt-2">
-               <select id="addr-poa" onchange="checkDocSelection('addr-poa', 'btn-addr-poa')" class="input-field mb-3 text-slate-700 text-lg">
-                 <option value="">Select Valid Supporting Document (POA)</option>
-                 <option>Bank Account / Post Office Passbook or Statement</option>
-                 <option>Voter ID / e-Voter ID</option>
+        <div class="grid grid-cols-2 gap-2.5 max-w-md mx-auto w-full my-auto overflow-y-auto max-h-[300px] no-scrollbar pr-1">
+           <input type="text" id="addr-co" class="input-field col-span-2 text-sm" placeholder="Care of (C/o)">
+           <input type="text" id="addr-house" class="input-field text-sm" placeholder="House/Bldg/Apt">
+           <input type="text" id="addr-street" class="input-field text-sm" placeholder="Street/Road">
+           <input type="text" id="addr-area" class="input-field text-sm" placeholder="Area/Locality">
+           <input type="text" id="addr-pincode" class="input-field text-sm font-mono" placeholder="Pincode (6 digits)">
+           <input type="text" id="addr-city" class="input-field text-sm" placeholder="Town / City">
+           <input type="text" id="addr-state" class="input-field text-sm" placeholder="State">
+           
+           <div class="col-span-2 mt-1">
+               <select id="addr-poa" onchange="checkDocSelection('addr-poa', 'btn-addr-poa')" class="input-field mb-2 text-slate-700 text-xs">
+                 <option value="">Select Supporting Document (POA)</option>
+                 <option>Electricity Bill (last 3 months)</option>
+                 <option>Bank Account Passbook / Statement</option>
+                 <option>Voter ID Card</option>
                  <option>Passport</option>
-                 <option>Ration Card</option>
-                 <option>Driving License</option>
-                 <option>Electricity Bill (not older than 3 months)</option>
-                 <option>Water Bill (not older than 3 months)</option>
-                 <option>Gas Connection Bill (not older than 3 months)</option>
-                 <option>Telephone / Broadband Bill (not older than 3 months)</option>
-                 <option>Registered Lease / Rent / Sale Agreement</option>
-                 <option>Property Tax Receipt (not older than 1 year)</option>
-                 <option>Allotment Letter of Accommodation (Govt)</option>
+                 <option>Registered Rent Agreement</option>
                </select>
-               <button id="btn-addr-poa" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-2xl notranslate">📸</span>
-                 <span>Provide POA Document</span>
+               <button id="btn-addr-poa" disabled onclick="openUploadModal(this)" type="button" class="w-full py-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs">
+                 
+                 <span>Attach POA Document</span>
               </button>
            </div>
         </div>
 
-        <button onclick="navigateTo('screen-12-verify')" class="btn-primary bg-[#6d6ca2] text-white mt-2 mb-2">Review Details</button>
+        <div class="pb-2">
+          <button onclick="navigateTo('screen-12-verify')" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">Review Address</button>
+        </div>
       </div>
 
       <!-- SCREEN 12-VERIFY: Address Verify -->
-      <div id="screen-12-verify" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Verify Address Details</h1>
-          <p class="text-lg font-medium text-slate-600">Please review your changes before submitting.</p>
+      <div id="screen-12-verify" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Verify Address Details</h1>
+          <p class="text-sm font-medium text-slate-600">Please review your changes before submitting.</p>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-3xl mx-auto w-full text-left">
-          <p class="text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">New Address Preview</p>
-          <p id="verify-address-text" class="text-2xl font-bold text-slate-900 leading-relaxed notranslate">
-            <!-- Populated via JS -->
-            123, Sample Street, New Delhi
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm my-auto max-w-md mx-auto w-full text-left">
+          <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">New Address Preview</p>
+          <p id="verify-address-text" class="text-base font-bold text-slate-900 leading-relaxed notranslate">
+            Flat 402, Green Valley Apartments, Mumbai, Maharashtra, 400069
           </p>
-          <div class="mt-6 pt-6 border-t border-slate-100 flex items-center gap-4">
-              <span class="text-2xl notranslate">📄</span>
+          <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
+              <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></span>
               <div>
-                  <p class="text-sm font-bold text-slate-500">Document Attached</p>
-                  <p class="text-base font-semibold text-slate-800">Ready for submission</p>
+                  <p class="text-xs font-bold text-slate-500">Supporting POA Attached</p>
+                  <p class="text-xs font-semibold text-emerald-700">Ready for submission</p>
               </div>
           </div>
         </div>
 
-        <button onclick="confirmAction('Address Update Request Submitted', 'URN: URN9485739281. Keep this for tracking.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
-          Proceed to Payment (₹50)
-        </button>
+        <div class="pb-2">
+          <button onclick="confirmAction('Address Update Request Submitted', 'URN: URN9485739281. Keep this for tracking.', true, '₹50.00')" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">
+            Proceed to Payment (₹50)
+          </button>
+        </div>
       </div>
 
-      <!-- SCREEN 13: Demographic Update Selection -->
-      <div id="screen-13" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Demographic Data</h1>
-          <p class="text-lg font-medium text-slate-600">Select the specific field you wish to update.</p>
+      <!-- SCREEN 13: Demographic Submenu (Name/DOB/Gender) -->
+      <div id="screen-13" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Update Demographic Data</h1>
+          <p class="text-sm font-medium text-slate-600">Select the specific field you wish to update.</p>
         </div>
 
-        <div class="grid grid-cols-3 gap-6 mb-10 max-w-4xl mx-auto w-full flex-1 content-center">
-          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('name');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
-            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
-            <h2 class="text-3xl">Name</h2>
+        <div class="flex flex-col gap-3 my-auto w-full max-w-sm mx-auto">
+          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('name');" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-slate-400 font-bold uppercase">Demographic</p>
+              <h2 class="text-lg font-bold">Update Name</h2>
+            </div>
+            <span class="text-lg text-slate-300 font-bold notranslate">→</span>
           </button>
-          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('dob');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
-            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
-            <h2 class="text-3xl">Date of Birth</h2>
+          
+          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('dob');" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-slate-400 font-bold uppercase">Demographic</p>
+              <h2 class="text-lg font-bold">Update Date of Birth</h2>
+            </div>
+            <span class="text-lg text-slate-300 font-bold notranslate">→</span>
           </button>
-          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('gender');" class="menu-card bg-white border border-slate-200 h-full min-h-[180px]">
-            <p class="text-sm text-slate-500 font-bold uppercase mb-1">Update</p>
-            <h2 class="text-3xl">Gender</h2>
+          
+          <button onclick="selectCard(this, 'screen-13-input'); setUpdateMode('gender');" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-slate-400 font-bold uppercase">Demographic</p>
+              <h2 class="text-lg font-bold">Update Gender</h2>
+            </div>
+            <span class="text-lg text-slate-300 font-bold notranslate">→</span>
           </button>
         </div>
 
-        <div class="mt-auto pb-4">
-          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500">Continue</button>
+        <div class="pb-2">
+          <button disabled onclick="executeSelection()" class="continue-btn btn-primary bg-slate-300 text-slate-500 rounded-2xl">Continue</button>
         </div>
       </div>
 
       <!-- SCREEN 13-INPUT: Demographic Forms -->
-      <div id="screen-13-input" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-8 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Enter New Details</h1>
-          <p class="text-lg font-medium text-slate-600">Provide the correct information and supporting documents.</p>
+      <div id="screen-13-input" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Enter New Details</h1>
+          <p class="text-sm font-medium text-slate-600">Provide updated information and supporting proof.</p>
         </div>
 
-        <div class="max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center mb-8">
-          
-          <!-- NAME FORM (Needs POI) -->
-          <div id="dynamic-form-name" class="hidden flex-col gap-5 w-full">
-             <input type="text" id="input-name" class="input-field notranslate" placeholder="Enter New Full Name (as per POI)">
-             <select id="doc-name" onchange="checkDocSelection('doc-name', 'btn-doc-name')" class="input-field text-slate-700 text-lg">
-               <option value="">Select Valid Supporting Document (POI)</option>
+        <div class="max-w-sm mx-auto w-full my-auto flex flex-col justify-center">
+          <!-- NAME FORM -->
+          <div id="dynamic-form-name" class="hidden flex-col gap-3 w-full">
+             <input type="text" id="input-name" class="input-field notranslate text-sm" placeholder="Enter Full Name (as per POI)">
+             <select id="doc-name" onchange="checkDocSelection('doc-name', 'btn-doc-name')" class="input-field text-slate-700 text-xs">
+               <option value="">Select Supporting Document (POI)</option>
                <option>Passport</option>
                <option>PAN Card / e-PAN</option>
-               <option>Voter ID / e-Voter ID</option>
+               <option>Voter ID Card</option>
                <option>Driving License</option>
-               <option>Ration / PDS Photo Card</option>
-               <option>Service Photo ID Card (Govt / PSU)</option>
-               <option>Pensioner Photo Card</option>
-               <option>CGHS / ECHS Photo Card</option>
-               <option>Kisan Photo Passbook</option>
-               <option>Marriage Certificate with Photograph</option>
              </select>
-             <button id="btn-doc-name" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-2xl notranslate">📸</span><span>Provide POI Document</span>
+             <button id="btn-doc-name" disabled onclick="openUploadModal(this)" type="button" class="w-full py-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs">
+                 <span>Attach POI Document</span>
              </button>
           </div>
 
-          <!-- DOB FORM (Needs DOB Document) -->
-          <div id="dynamic-form-dob" class="hidden flex-col gap-5 w-full">
-             <input type="date" id="input-dob" class="input-field text-slate-600 notranslate">
-             <select id="doc-dob" onchange="checkDocSelection('doc-dob', 'btn-doc-dob')" class="input-field text-slate-700 text-lg">
-               <option value="">Select Valid Supporting Document (DOB)</option>
+          <!-- DOB FORM -->
+          <div id="dynamic-form-dob" class="hidden flex-col gap-3 w-full">
+             <input type="date" id="input-dob" class="input-field text-slate-600 notranslate text-sm">
+             <select id="doc-dob" onchange="checkDocSelection('doc-dob', 'btn-doc-dob')" class="input-field text-slate-700 text-xs">
+               <option value="">Select Supporting Document (DOB)</option>
                <option>Birth Certificate</option>
                <option>Passport</option>
-               <option>PAN Card / e-PAN</option>
-               <option>Mark Sheet / Certificate (Recognized Board or University)</option>
-               <option>Service Photo ID Card (Govt / PSU)</option>
-               <option>Central / State Pension Payment Order</option>
-               <option>Transgender ID Card / Certificate</option>
+               <option>PAN Card</option>
+               <option>School Mark Sheet / Leaving Certificate</option>
              </select>
-             <button id="btn-doc-dob" disabled onclick="openUploadModal(this)" type="button" class="w-full py-4 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-2xl notranslate">📸</span><span>Provide DOB Document</span>
+             <button id="btn-doc-dob" disabled onclick="openUploadModal(this)" type="button" class="w-full py-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-xs">
+                 <span>Attach DOB Document</span>
              </button>
           </div>
 
-          <!-- GENDER FORM (No document required usually for general correction, but based on conditions) -->
-          <div id="dynamic-form-gender" class="hidden flex justify-center gap-6 w-full">
-             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Male')"><h2>Male</h2></button>
-             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Female')"><h2>Female</h2></button>
-             <button class="menu-card bg-white border border-slate-200 flex-1 py-12" onclick="selectGender(this, 'Transgender')"><h2>Transgender</h2></button>
+          <!-- GENDER FORM -->
+          <div id="dynamic-form-gender" class="hidden flex-col gap-2.5 w-full">
+             <button class="menu-card bg-white border border-slate-200 py-3.5 px-4 justify-center" onclick="selectGender(this, 'Male')"><h2 class="text-base font-bold">Male</h2></button>
+             <button class="menu-card bg-white border border-slate-200 py-3.5 px-4 justify-center" onclick="selectGender(this, 'Female')"><h2 class="text-base font-bold">Female</h2></button>
+             <button class="menu-card bg-white border border-slate-200 py-3.5 px-4 justify-center" onclick="selectGender(this, 'Transgender')"><h2 class="text-base font-bold">Transgender</h2></button>
           </div>
-          
         </div>
 
-        <!-- Continue Button (Enabled by JS for gender, always on for inputs) -->
-        <button id="btn-demo-continue" onclick="navigateTo('screen-13-verify')" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">Review Details</button>
+        <div class="pb-2">
+          <button id="btn-demo-continue" onclick="navigateTo('screen-13-verify')" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">Review Details</button>
+        </div>
       </div>
 
       <!-- SCREEN 13-VERIFY: Demographic Verify -->
-      <div id="screen-13-verify" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-10 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Verify Updated Details</h1>
-          <p class="text-lg font-medium text-slate-600">Please review your changes before submitting.</p>
+      <div id="screen-13-verify" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Verify Updated Details</h1>
+          <p class="text-sm font-medium text-slate-600">Please review your changes before submitting.</p>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-3xl mx-auto w-full text-left">
-          <p id="verify-info-label" class="text-sm text-slate-500 uppercase font-bold mb-4 tracking-wider">New Detail Preview</p>
-          <p id="verify-info-text" class="text-3xl font-bold text-slate-900 leading-relaxed notranslate">
-            <!-- Populated via JS -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm my-auto max-w-sm mx-auto w-full text-left">
+          <p id="verify-info-label" class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">New Detail Preview</p>
+          <p id="verify-info-text" class="text-2xl font-bold text-slate-900 notranslate mb-4">
             Rahul K Sharma
           </p>
-          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center gap-4">
-              <span class="text-2xl notranslate">📄</span>
+          <div class="pt-4 border-t border-slate-100 flex items-center gap-3">
+              <span class="text-[#6d6ca2] notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></span>
               <div>
-                  <p class="text-sm font-bold text-slate-500">Supporting Document Attached</p>
-                  <p class="text-base font-semibold text-slate-800">Ready for submission</p>
+                  <p class="text-xs font-bold text-slate-500">Supporting Document</p>
+                  <p class="text-xs font-semibold text-emerald-700">Verified & Attached</p>
               </div>
           </div>
         </div>
 
-        <button onclick="confirmAction('Update Request Submitted', 'URN: URN8827364521. Keep this URN to track status.', true)" class="btn-primary bg-[#6d6ca2] text-white mt-auto mb-4">
-          Proceed to Payment (₹50)
-        </button>
+        <div class="pb-2">
+          <button onclick="confirmAction('Update Request Submitted', 'URN: URN8827364521. Keep this URN to track status.', true, '₹50.00')" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">
+            Proceed to Payment (₹50)
+          </button>
+        </div>
       </div>
       
-      <!-- SCREEN 14: Document Update Form -->
-      <div id="screen-14" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center">
-        <div class="mb-8 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Document Update (POI & POA)</h1>
-          <p class="text-lg font-medium text-slate-600">Submit updated Proof of Identity and Proof of Address documents.</p>
+      <!-- SCREEN BIOMETRIC-UPDATE: Biometrics Capture (Laws of UX: Instant Sensory Feedback) -->
+      <div id="screen-biometric-update" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center overflow-y-auto no-scrollbar">
+        <div class="mt-1 text-center">
+          <span class="inline-block px-3 py-0.5 bg-indigo-50 border border-indigo-200 rounded-full text-[11px] font-bold text-[#6d6ca2] uppercase tracking-wider mb-1">Biometric Update</span>
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-0.5">Capture Biometrics</h1>
+          <p class="text-xs font-medium text-slate-600">Scan fingerprints, iris, or take a live photo on the kiosk sensors.</p>
         </div>
 
-        <div class="grid grid-cols-2 gap-8 w-full max-w-5xl mx-auto flex-1 mb-8">
+        <!-- 3 Modalities -->
+        <div class="grid grid-cols-3 gap-2.5 my-auto max-w-md mx-auto w-full">
+          <!-- Fingerprints -->
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
+            <div id="bio-icon-fp" class="w-12 h-12 rounded-full bg-indigo-50 text-[#6d6ca2] flex items-center justify-center mb-1.5 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 004 11m12 0c0 1.254-.153 2.47-.442 3.633"/></svg></div>
+            <h3 class="text-sm font-bold text-slate-800">Fingers</h3>
+            <p id="bio-status-fp" class="text-[10px] font-semibold text-slate-400 mb-2.5">Not Scanned</p>
+            <button id="btn-scan-fp" onclick="simulateBioScan('fp')" class="w-full py-2 px-2 bg-[#6d6ca2] text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm">
+              Scan
+            </button>
+          </div>
+
+          <!-- Iris Scan -->
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
+            <div id="bio-icon-iris" class="w-12 h-12 rounded-full bg-indigo-50 text-[#6d6ca2] flex items-center justify-center mb-1.5 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></div>
+            <h3 class="text-sm font-bold text-slate-800">Iris</h3>
+            <p id="bio-status-iris" class="text-[10px] font-semibold text-slate-400 mb-2.5">Not Scanned</p>
+            <button id="btn-scan-iris" onclick="simulateBioScan('iris')" class="w-full py-2 px-2 bg-[#6d6ca2] text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm">
+              Scan
+            </button>
+          </div>
+
+          <!-- Live Photo -->
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
+            <div id="bio-icon-photo" class="w-12 h-12 rounded-full bg-indigo-50 text-[#6d6ca2] flex items-center justify-center mb-1.5 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+            <h3 class="text-sm font-bold text-slate-800">Photo</h3>
+            <p id="bio-status-photo" class="text-[10px] font-semibold text-slate-400 mb-2.5">Not Captured</p>
+            <button id="btn-scan-photo" onclick="simulateBioScan('photo')" class="w-full py-2 px-2 bg-[#6d6ca2] text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm">
+              Capture
+            </button>
+          </div>
+        </div>
+
+        <!-- Sensor Status Box -->
+        <div id="bio-scanner-box" class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm max-w-md mx-auto w-full my-auto text-left">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kiosk Optical Sensor</span>
+            <span id="bio-sensor-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">Ready</span>
+          </div>
+          <p id="bio-sensor-msg" class="text-xs font-semibold text-slate-700">Please tap a scan button above to capture your biometric data.</p>
+        </div>
+
+        <div class="pb-2">
+          <button id="btn-bio-submit" disabled onclick="confirmAction('Biometric Update Submitted', 'URN: BIO7362910482. Biometric records updated.', true, '₹100.00')" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed">
+            Proceed to Payment (₹100)
+          </button>
+          <p class="text-[11px] text-slate-400 mt-1 font-medium">Standard UIDAI Biometric Fee: ₹100</p>
+        </div>
+      </div>
+
+      <!-- SCREEN 14: Document Update Form -->
+      <div id="screen-14" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Document Update (POI & POA)</h1>
+          <p class="text-sm font-medium text-slate-600">Submit updated Proof of Identity and Proof of Address.</p>
+        </div>
+
+        <div class="flex flex-col gap-3 my-auto max-w-sm mx-auto w-full">
            <!-- POI -->
-           <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-              <h3 class="text-xl font-bold text-slate-800 mb-4">Proof of Identity (POI)</h3>
-              <select id="doc-14-poi" onchange="checkDocSelection('doc-14-poi', 'btn-14-poi')" class="input-field mb-6 text-lg text-slate-700">
-                <option value="">Select Valid Supporting Document (POI)</option>
+           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2">
+              <h3 class="text-sm font-bold text-slate-800">Proof of Identity (POI)</h3>
+              <select id="doc-14-poi" onchange="checkDocSelection('doc-14-poi', 'btn-14-poi')" class="input-field text-xs text-slate-700">
+                <option value="">Select Document (POI)</option>
                 <option>Passport</option>
-                <option>PAN Card / e-PAN</option>
-                <option>Voter ID / e-Voter ID</option>
+                <option>PAN Card</option>
+                <option>Voter ID</option>
                 <option>Driving License</option>
-                <option>Ration / PDS Photo Card</option>
-                <option>Service Photo ID Card (Govt / PSU)</option>
-                <option>Pensioner Photo Card</option>
-                <option>CGHS / ECHS Photo Card</option>
-                <option>Kisan Photo Passbook</option>
-                <option>Marriage Certificate with Photograph</option>
               </select>
-              <button id="btn-14-poi" disabled onclick="openUploadModal(this)" type="button" class="mt-auto py-8 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-50 flex flex-col items-center justify-center gap-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-4xl notranslate">📸</span>
-                 <span class="text-lg">Provide POI Document</span>
+              <button id="btn-14-poi" disabled onclick="openUploadModal(this)" type="button" class="py-2.5 rounded-xl border border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 text-xs">
+                 
+                 <span>Attach POI Document</span>
               </button>
            </div>
            <!-- POA -->
-           <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-              <h3 class="text-xl font-bold text-slate-800 mb-4">Proof of Address (POA)</h3>
-              <select id="doc-14-poa" onchange="checkDocSelection('doc-14-poa', 'btn-14-poa')" class="input-field mb-6 text-lg text-slate-700">
-                <option value="">Select Valid Supporting Document (POA)</option>
-                <option>Bank Account / Post Office Passbook or Statement</option>
-                <option>Voter ID / e-Voter ID</option>
+           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2">
+              <h3 class="text-sm font-bold text-slate-800">Proof of Address (POA)</h3>
+              <select id="doc-14-poa" onchange="checkDocSelection('doc-14-poa', 'btn-14-poa')" class="input-field text-xs text-slate-700">
+                <option value="">Select Document (POA)</option>
+                <option>Electricity Bill (last 3 months)</option>
+                <option>Bank Passbook / Statement</option>
+                <option>Voter ID</option>
                 <option>Passport</option>
-                <option>Ration Card</option>
-                <option>Driving License</option>
-                <option>Electricity Bill (not older than 3 months)</option>
-                <option>Water Bill (not older than 3 months)</option>
-                <option>Gas Connection Bill (not older than 3 months)</option>
-                <option>Telephone / Broadband Bill (not older than 3 months)</option>
-                <option>Registered Lease / Rent / Sale Agreement</option>
-                <option>Property Tax Receipt (not older than 1 year)</option>
-                <option>Allotment Letter of Accommodation (Govt)</option>
               </select>
-              <button id="btn-14-poa" disabled onclick="openUploadModal(this)" type="button" class="mt-auto py-8 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-50 flex flex-col items-center justify-center gap-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:bg-slate-50">
-                 <span class="text-4xl notranslate">📸</span>
-                 <span class="text-lg">Provide POA Document</span>
+              <button id="btn-14-poa" disabled onclick="openUploadModal(this)" type="button" class="py-2.5 rounded-xl border border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors disabled:opacity-40 text-xs">
+                 
+                 <span>Attach POA Document</span>
               </button>
            </div>
         </div>
 
-        <div class="mt-auto pb-4">
-          <button onclick="confirmAction('Document Update Submitted', 'SRN: DOC928374001. Verification in progress.', true)" class="btn-primary bg-[#6d6ca2] text-white">Proceed to Payment (₹50)</button>
+        <div class="pb-2">
+          <button onclick="confirmAction('Document Update Submitted', 'SRN: DOC928374001. Verification in progress.', true, '₹50.00')" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">Proceed to Payment (₹50)</button>
         </div>
       </div>
 
       <!-- SCREEN 16: Lock / Unlock Aadhaar -->
-      <div id="screen-16" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center items-center">
-        <h1 class="text-3xl font-extrabold text-slate-900 mb-10">Aadhaar Lock Status</h1>
+      <div id="screen-16" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center items-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Aadhaar Lock Status</h1>
+          <p class="text-sm font-medium text-slate-600">Prevent biometric & demographic misuse.</p>
+        </div>
         
-        <div class="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm mb-12 flex flex-col items-center max-w-xl w-full">
-          <h2 class="text-4xl font-black text-slate-900 mb-4 tracking-wide text-emerald-700">UNLOCKED</h2>
-          <p class="text-lg font-medium text-slate-600">Your Aadhaar is currently active and can be used for authentication.</p>
+        <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm my-auto max-w-sm w-full">
+          <span class="inline-block px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 mb-2">CURRENT STATUS</span>
+          <h2 class="text-3xl font-black text-emerald-700 tracking-wider mb-2">UNLOCKED</h2>
+          <p class="text-xs font-medium text-slate-600 leading-relaxed">Your Aadhaar number is currently active and can be used for authentication.</p>
         </div>
 
-        <button onclick="confirmAction('Aadhaar Locked Successfully', 'Your Aadhaar number is secured and cannot be used for authentication until unlocked.')" class="w-full max-w-sm mx-auto py-4 bg-slate-800 text-white text-xl font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-md">
-          Lock Aadhaar
-        </button>
+        <div class="w-full pb-2">
+          <button onclick="confirmAction('Aadhaar Locked Successfully', 'Your Aadhaar number is secured and cannot be used for authentication until unlocked.', false)" class="btn-primary bg-slate-900 text-white rounded-2xl">
+            Lock Aadhaar Number
+          </button>
+        </div>
       </div>
 
       <!-- SCREEN 17: Lock / Unlock Biometrics -->
-      <div id="screen-17" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center justify-center items-center">
-        <h1 class="text-3xl font-extrabold text-slate-900 mb-10">Biometric Lock Status</h1>
+      <div id="screen-17" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center items-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Biometric Lock Status</h1>
+          <p class="text-sm font-medium text-slate-600">Protect fingerprints and iris from unauthorized verification.</p>
+        </div>
         
-        <div class="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm mb-12 flex flex-col items-center max-w-xl w-full">
-          <h2 class="text-4xl font-black text-slate-900 mb-4 tracking-wide text-emerald-700">UNLOCKED</h2>
-          <p class="text-lg font-medium text-slate-600">Your fingerprints and iris scan can be used for authentication.</p>
+        <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm my-auto max-w-sm w-full">
+          <span class="inline-block px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 mb-2">CURRENT STATUS</span>
+          <h2 class="text-3xl font-black text-emerald-700 tracking-wider mb-2">UNLOCKED</h2>
+          <p class="text-xs font-medium text-slate-600 leading-relaxed">Your fingerprints and iris scans can be used for verification.</p>
         </div>
 
-        <button onclick="confirmAction('Biometrics Locked Successfully', 'Biometric authentication is disabled to prevent misuse.')" class="w-full max-w-sm mx-auto py-4 bg-slate-800 text-white text-xl font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-md">
-          Lock Biometrics
-        </button>
+        <div class="w-full pb-2">
+          <button onclick="confirmAction('Biometrics Locked Successfully', 'Biometric authentication is disabled to prevent misuse.', false)" class="btn-primary bg-slate-900 text-white rounded-2xl">
+            Lock Biometrics
+          </button>
+        </div>
       </div>
 
       <!-- SCREEN 18: Generate Virtual ID -->
-      <div id="screen-18" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center justify-center">
-        <h1 class="text-3xl font-extrabold text-slate-900 mb-4">Virtual ID (VID) Generator</h1>
-        <p class="text-lg font-medium text-slate-600 px-4 max-w-2xl mb-10">A Virtual ID is a temporary, revocable 16-digit number mapped to your Aadhaar. It can be used securely in place of your Aadhaar number.</p>
-
-        <div id="vid-result" class="hidden bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 max-w-xl w-full text-center">
-          <p class="text-sm text-slate-500 font-bold uppercase tracking-widest mb-4">Your New Virtual ID</p>
-          <p class="text-4xl font-black text-slate-900 tracking-widest notranslate">9482 1039 4857 2011</p>
+      <div id="screen-18" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between text-center items-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-1">Virtual ID (VID) Generator</h1>
+          <p class="text-xs font-medium text-slate-600 max-w-xs mx-auto">A revocable 16-digit random number mapped to your Aadhaar for enhanced privacy.</p>
         </div>
 
-        <button id="vid-gen-btn" onclick="generateVID()" class="btn-primary bg-[#6d6ca2] text-white w-full max-w-sm">
-          Generate Virtual ID
-        </button>
-        <button id="vid-finish-btn" onclick="goHome()" class="hidden btn-secondary">
-          Finish
-        </button>
+        <div class="my-auto max-w-sm w-full">
+          <div id="vid-result" class="hidden bg-white border border-slate-200 rounded-3xl p-6 shadow-sm mb-4 text-center">
+            <p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-2">Your 16-Digit Virtual ID</p>
+            <p class="text-3xl font-black text-[#6d6ca2] font-mono tracking-widest notranslate mb-2">9482 1039 4857 2011</p>
+            <p class="text-[11px] text-slate-500 font-medium">Valid for all electronic KYC transactions</p>
+          </div>
+          
+          <button id="vid-gen-btn" onclick="generateVID()" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">Generate New VID</button>
+          <button id="vid-finish-btn" onclick="goHome()" class="btn-secondary rounded-2xl hidden mt-2">Finish & Exit</button>
+        </div>
+
+        <div class="text-xs text-slate-400 font-medium pb-2">
+           VID will also be dispatched via SMS
+        </div>
       </div>
 
-      <!-- SCREEN 21: Payment Options -->
-      <div id="screen-21" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center">
+      <!-- SCREEN 21: Integrated Payment Options (Hick's Law: 3 distinct payment methods) -->
+      <div id="screen-21" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between">
         
-        <div id="payment-selection-view" class="w-full flex-1 flex flex-col">
-            <div class="mb-8 mt-4 text-center">
-              <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Select Payment Method</h1>
-              <p class="text-lg font-medium text-slate-600">Amount Due: <span class="font-bold text-[#6d6ca2] text-2xl ml-1 notranslate">₹50.00</span></p>
-            </div>
+        <!-- Payment Selection View -->
+        <div id="payment-selection-view" class="w-full flex-1 flex flex-col justify-between">
+           <div class="mt-1 text-center">
+             <span class="inline-block px-3 py-0.5 bg-indigo-50 border border-indigo-200 rounded-full text-[11px] font-bold text-[#6d6ca2] uppercase tracking-wider mb-1">Secure Checkout</span>
+             <h1 class="text-2xl font-extrabold text-slate-900 mb-0.5">Select Payment Method</h1>
+             <p class="text-sm font-medium text-slate-600">Amount Due: <span id="payment-amount-display" class="font-bold text-[#6d6ca2] text-xl ml-1 notranslate">₹50.00</span></p>
+           </div>
 
-            <div class="grid grid-cols-1 gap-5 max-w-xl mx-auto w-full flex-1 content-start pb-8">
-               <!-- UPI -->
-               <button onclick="processPayment('UPI')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
-                  <div class="flex items-center gap-5">
-                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">📱</div>
-                     <div class="text-left">
-                        <h3 class="text-xl font-bold text-slate-800">UPI / QR Code</h3>
-                        <p class="text-sm text-slate-500 font-medium mt-1">Google Pay, PhonePe, Paytm, etc.</p>
-                     </div>
-                  </div>
-                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
-               </button>
-               <!-- Card -->
-               <button onclick="processPayment('Credit/Debit Card')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
-                  <div class="flex items-center gap-5">
-                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">💳</div>
-                     <div class="text-left">
-                        <h3 class="text-xl font-bold text-slate-800">Credit / Debit Card</h3>
-                        <p class="text-sm text-slate-500 font-medium mt-1">Visa, Mastercard, RuPay</p>
-                     </div>
-                  </div>
-                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
-               </button>
-               <!-- Net Banking -->
-               <button onclick="processPayment('Net Banking')" class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group">
-                  <div class="flex items-center gap-5">
-                     <div class="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl group-hover:bg-indigo-50 transition-colors notranslate">🏦</div>
-                     <div class="text-left">
-                        <h3 class="text-xl font-bold text-slate-800">Net Banking</h3>
-                        <p class="text-sm text-slate-500 font-medium mt-1">All major Indian banks</p>
-                     </div>
-                  </div>
-                  <span class="text-slate-300 font-bold text-3xl group-hover:text-[#6d6ca2] transition-colors notranslate">→</span>
-               </button>
-            </div>
+           <div class="flex flex-col gap-2.5 my-auto max-w-sm mx-auto w-full">
+              <!-- UPI -->
+              <button onclick="processPayment('UPI')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between group">
+                 <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-[#6d6ca2] group-hover:bg-[#6d6ca2] group-hover:text-white transition-colors notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
+                    <div>
+                       <h3 class="text-base font-bold text-slate-800">UPI / QR Code</h3>
+                       <p class="text-[11px] text-slate-500 font-medium">GPay, PhonePe, Paytm, BHIM</p>
+                    </div>
+                 </div>
+                 <span class="text-slate-300 font-bold text-xl group-hover:text-[#6d6ca2] notranslate">→</span>
+              </button>
+
+              <!-- Card -->
+              <button onclick="processPayment('Card')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between group">
+                 <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-[#6d6ca2] group-hover:bg-[#6d6ca2] group-hover:text-white transition-colors notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div>
+                    <div>
+                       <h3 class="text-base font-bold text-slate-800">Debit / Credit Card</h3>
+                       <p class="text-[11px] text-slate-500 font-medium">Visa, MasterCard, RuPay</p>
+                    </div>
+                 </div>
+                 <span class="text-slate-300 font-bold text-xl group-hover:text-[#6d6ca2] notranslate">→</span>
+              </button>
+
+              <!-- Net Banking -->
+              <button onclick="processPayment('NetBanking')" class="menu-card bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between group">
+                 <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-[#6d6ca2] group-hover:bg-[#6d6ca2] group-hover:text-white transition-colors notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg></div>
+                    <div>
+                       <h3 class="text-base font-bold text-slate-800">Net Banking</h3>
+                       <p class="text-[11px] text-slate-500 font-medium">All major Indian banks</p>
+                    </div>
+                 </div>
+                 <span class="text-slate-300 font-bold text-xl group-hover:text-[#6d6ca2] notranslate">→</span>
+              </button>
+           </div>
+           
+           <div class="text-center pb-2">
+             <p class="text-xs text-slate-400 font-medium"><svg class="w-4 h-4 inline-block -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> 256-bit Encrypted Government Payment Gateway</p>
+           </div>
         </div>
 
-        <div id="payment-processing-view" class="hidden w-full flex-1 flex-col items-center justify-center">
-            <div class="w-20 h-20 border-8 border-slate-200 border-t-[#6d6ca2] rounded-full animate-spin mb-8"></div>
-            <h2 class="text-3xl font-bold text-slate-800 mb-3">Processing Payment...</h2>
-            <p class="text-slate-500 text-lg font-medium">Please do not refresh or press back.</p>
-        </div>
-      </div>
-
-      <!-- SCREEN 19: Universal Confirmation -->
-      <div id="screen-19" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade items-center justify-center text-center">
-        <div class="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-8 notranslate">
-            <span class="text-5xl">✓</span>
-        </div>
-        <h1 id="confirm-title" class="text-4xl font-extrabold text-slate-900 mb-4">Request Completed</h1>
-        <p id="confirm-subtitle" class="text-xl font-medium text-slate-600 mb-12">Service Request Number: XXXX</p>
-        
-        <div class="flex gap-4 w-full max-w-md mx-auto">
-          <button onclick="goHome()" class="flex-1 py-4 bg-white border border-slate-300 text-slate-700 text-lg font-bold rounded-xl active:bg-slate-50 transition-colors shadow-sm">
-            Print Receipt
-          </button>
-          <button onclick="goHome()" class="flex-1 py-4 bg-slate-800 text-white text-lg font-bold rounded-xl active:bg-slate-900 transition-colors shadow-sm">
-            Go Home
-          </button>
+        <!-- Payment Processing State (Doherty Threshold: Instant status feedback) -->
+        <div id="payment-processing-view" class="hidden w-full flex-1 flex-col items-center justify-center my-auto">
+            <div class="w-16 h-16 border-4 border-indigo-200 border-t-[#6d6ca2] rounded-full animate-spin mb-4"></div>
+            <h2 class="text-xl font-bold text-slate-900 mb-1">Processing Payment...</h2>
+            <p class="text-xs font-medium text-slate-500">Please do not tap back or cancel session.</p>
         </div>
       </div>
 
-      <!-- SCREEN 15 (Check Status Timeline) -->
-      <div id="screen-15" class="screen hidden absolute inset-0 flex flex-col p-10 bg-[#f5eae7] screen-fade text-center items-center">
-        <div class="mb-8 mt-4 text-center">
-          <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Update Status</h1>
-          <p class="text-lg font-medium text-slate-600 font-mono notranslate">SRN: 8472938475</p>
+      <!-- SCREEN 19: Universal Confirmation / Receipt Screen (Peak-End Rule) -->
+      <div id="screen-19" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between items-center text-center">
+        <div class="mt-2 text-center">
+          <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-xs notranslate"><svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+          <h1 id="confirm-title" class="text-2xl font-extrabold text-slate-900 mb-1">Request Completed</h1>
+          <p id="confirm-subtitle" class="text-xs font-semibold text-slate-600 font-mono notranslate max-w-xs mx-auto">
+            URN: URN8472938475. Keep this for tracking.
+          </p>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm mb-10 flex-1 max-w-xl w-full flex justify-center text-left">
+        <div class="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm my-auto max-w-sm w-full text-left">
+           <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+             <span class="text-xs font-bold text-slate-400 uppercase">Acknowledgement</span>
+             <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Recorded</span>
+           </div>
+           <div class="space-y-1.5 text-xs text-slate-600">
+             <div class="flex justify-between">
+               <span class="text-slate-400">Date & Time:</span>
+               <span class="font-bold text-slate-800 notranslate">Today, Live Session</span>
+             </div>
+             <div class="flex justify-between">
+               <span class="text-slate-400">Channel:</span>
+               <span class="font-bold text-slate-800 notranslate">UIDAI Self-Service Kiosk</span>
+             </div>
+             <div class="flex justify-between">
+               <span class="text-slate-400">SMS Confirmation:</span>
+               <span class="font-bold text-slate-800 notranslate">Sent to Mobile</span>
+             </div>
+           </div>
+        </div>
+
+        <div class="w-full flex flex-col gap-2 pb-2">
+          <button onclick="window.print()" class="btn-secondary rounded-2xl py-3 text-base">
+            <svg class="w-5 h-5 inline-block -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            <span>Print Paper Receipt</span>
+          </button>
+          <button onclick="goHome()" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl py-3 text-base">
+            Finish & Exit
+          </button>
+        </div>
+      </div>
+
+      <!-- SCREEN 15: Status Timeline Screen -->
+      <div id="screen-15" class="screen hidden absolute inset-0 flex flex-col p-6 bg-[#f5eae7] screen-fade justify-between items-center text-center">
+        <div class="mt-2 text-center">
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-0.5">Request Status</h1>
+          <p class="text-xs font-medium text-slate-600 font-mono notranslate">SRN: 8472938475</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm my-auto max-w-sm w-full flex justify-center text-left">
           <!-- Timeline -->
-          <div class="relative border-l-2 border-slate-200 ml-4 flex flex-col gap-10">
-            <div class="relative pl-8">
-              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-emerald-600 border-4 border-white shadow-sm"></div>
-              <h3 class="text-xl font-bold text-slate-900">Request Submitted</h3>
-              <p class="text-base font-medium text-slate-500 mt-1 notranslate">12 Oct 2023</p>
+          <div class="relative border-l-2 border-slate-200 ml-3 flex flex-col gap-6 py-2">
+            <div class="relative pl-6">
+              <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></div>
+              <h3 class="text-sm font-bold text-slate-900">Request Submitted</h3>
+              <p class="text-[11px] font-medium text-slate-400 notranslate">12 Oct 2023</p>
             </div>
-            <div class="relative pl-8">
-              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-emerald-600 border-4 border-white shadow-sm"></div>
-              <h3 class="text-xl font-bold text-slate-900">Payment Successful</h3>
-              <p class="text-base font-medium text-slate-500 mt-1 notranslate">12 Oct 2023</p>
+            <div class="relative pl-6">
+              <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></div>
+              <h3 class="text-sm font-bold text-slate-900">Payment Verified</h3>
+              <p class="text-[11px] font-medium text-slate-400 notranslate">12 Oct 2023</p>
             </div>
-            <div class="relative pl-8">
-              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-amber-500 border-4 border-white shadow-sm"></div>
-              <h3 class="text-xl font-bold text-slate-900">Under Review</h3>
-              <p class="text-base font-medium text-slate-500 mt-1">Processing documents...</p>
+            <div class="relative pl-6">
+              <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-white shadow-xs"></div>
+              <h3 class="text-sm font-bold text-slate-900">Under Review</h3>
+              <p class="text-[11px] font-medium text-slate-500">Document verifications in progress</p>
             </div>
-            <div class="relative pl-8 opacity-40">
-              <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-slate-300 border-4 border-white shadow-sm"></div>
-              <h3 class="text-xl font-bold text-slate-900">Update Completed</h3>
-              <p class="text-base font-medium text-slate-500 mt-1">Pending</p>
+            <div class="relative pl-6 opacity-40">
+              <div class="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-slate-300 border-2 border-white shadow-xs"></div>
+              <h3 class="text-sm font-bold text-slate-900">Completed</h3>
+              <p class="text-[11px] font-medium text-slate-400">Pending</p>
             </div>
           </div>
         </div>
 
-        <button onclick="goHome()" class="btn-primary bg-[#6d6ca2] text-white mb-4 w-full">Done</button>
+        <div class="w-full pb-2">
+          <button onclick="goHome()" class="btn-primary bg-[#6d6ca2] text-white rounded-2xl">Done</button>
+        </div>
       </div>
 
-      <!-- SCREEN 20: Session End -->
-      <div id="screen-20" class="screen hidden absolute inset-0 flex flex-col p-10 bg-slate-900 text-white screen-fade items-center justify-center text-center">
-        <h1 class="text-5xl font-extrabold mb-6">Thank You</h1>
-        <p class="text-xl font-medium text-slate-400 mb-12 max-w-xl leading-relaxed">
-          Your session has safely ended.<br/><br/>
-          All personal information has been securely cleared from this kiosk to protect your privacy.
-        </p>
-        
-        <p class="text-lg font-medium text-slate-500 mb-10">Returning to home in <span id="countdown" class="font-bold text-white text-2xl mx-1 notranslate">10</span> seconds</p>
-        
-        <button onclick="navigateTo('screen-01')" class="btn-primary m-0 border border-slate-700 bg-slate-800 hover:bg-slate-700 shadow-none text-white">
-          Finish Now
-        </button>
+      <!-- SCREEN 20: Secure Session End Screen -->
+      <div id="screen-20" class="screen hidden absolute inset-0 flex flex-col p-6 bg-slate-950 text-white screen-fade items-center justify-between text-center">
+        <div class="my-auto max-w-xs w-full flex flex-col items-center">
+          <div class="w-16 h-16 bg-slate-800 text-emerald-400 rounded-full flex items-center justify-center mb-4 border border-slate-700 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div>
+          <h1 class="text-3xl font-extrabold mb-2">Thank You</h1>
+          <p class="text-xs font-medium text-slate-400 mb-6 leading-relaxed">
+            Your kiosk session has ended safely. All personal cache and temporary records have been permanently cleared.
+          </p>
+          <div class="px-4 py-2 bg-slate-900 rounded-full border border-slate-800 text-xs font-mono text-slate-400">
+            Auto-resetting in <span id="countdown" class="font-bold text-white text-base mx-1 notranslate">10</span>s
+          </div>
+        </div>
+
+        <div class="w-full pb-2">
+          <button onclick="navigateTo('screen-01')" class="btn-primary bg-white text-slate-900 rounded-2xl font-bold">Start New Session</button>
+        </div>
       </div>
 
     </main>
 
-    <!-- Bottom Nav -->
-    <footer id="bottom-nav" class="flex-none flex items-center justify-between px-10 py-5 bg-white border-t border-slate-200 hidden z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
-      <div class="flex gap-4">
-        <button onclick="goBack()" class="px-8 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-lg hover:bg-slate-200 transition-colors">Back</button>
-        <button onclick="goHome()" class="px-8 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-lg hover:bg-slate-200 transition-colors">Home</button>
+    <!-- Bottom Navigation Bar (Fitts's Law: Always anchored at reachable bottom) -->
+    <footer id="bottom-nav" class="flex-none flex items-center justify-between px-6 py-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 hidden z-10 shadow-xs">
+      <div class="flex items-center gap-2">
+        <button onclick="goBack()" class="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm hover:bg-slate-200 active:scale-95 transition-all flex items-center gap-1.5">
+          <span class="notranslate">←</span>
+          <span>Back</span>
+        </button>
+        <button onclick="goHome()" class="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm hover:bg-slate-200 active:scale-95 transition-all flex items-center gap-1.5">
+          <span>Home</span>
+        </button>
       </div>
-      <div class="flex items-center gap-8">
-        <div class="text-center">
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Session</p>
-          <p id="session-timer-display" class="text-xl font-bold text-slate-700 font-mono leading-none mt-1 notranslate">02:00</p>
+      
+      <div class="flex items-center gap-4">
+        <!-- Session timer badge with clear visual affordance -->
+        <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <div class="text-left">
+            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Timer</p>
+            <p id="session-timer-display" class="text-sm font-bold text-slate-700 font-mono leading-none notranslate mt-0.5">02:00</p>
+          </div>
         </div>
-        <button onclick="cancelSession()" class="px-6 py-3 rounded-xl text-[#6d6ca2] font-bold text-lg hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
-          Cancel Session
+        
+        <button onclick="cancelSession()" class="px-3.5 py-2 rounded-xl text-rose-600 font-bold text-xs hover:bg-rose-50 border border-rose-200/60 active:scale-95 transition-all">
+          Exit
         </button>
       </div>
     </footer>
 
-    <!-- Upload Modal Overlay -->
-    <div id="upload-modal" class="hidden absolute inset-0 bg-slate-900/60 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-      <div class="bg-white rounded-[2rem] p-10 max-w-2xl w-full shadow-2xl border border-slate-200 text-center flex flex-col gap-8 animate-[fadeIn_0.2s_ease-out]">
-          <h2 class="text-3xl font-extrabold text-slate-900">Provide Document</h2>
-          <p class="text-lg text-slate-600 font-medium -mt-4">Choose how you would like to securely provide this document.</p>
+    <!-- Document Upload Modal Overlay (Law of Proximity & Focal Point) -->
+    <div id="upload-modal" class="hidden absolute inset-0 bg-slate-900/60 z-50 flex items-center justify-center backdrop-blur-xs transition-opacity p-4">
+      <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 text-center flex flex-col gap-4 animate-[fadeIn_0.15s_ease-out]">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900">Provide Document</h2>
+            <p class="text-xs text-slate-500 font-medium mt-1">Select a method to attach your supporting document.</p>
+          </div>
           
-          <div class="flex gap-6">
-              <!-- Scan Option -->
-              <button onclick="simulateUpload('Scanner')" class="flex-1 bg-white border-2 border-slate-200 rounded-2xl p-8 hover:bg-slate-50 hover:border-slate-400 transition-all group flex flex-col items-center gap-4">
-                  <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-4xl group-hover:bg-slate-200 transition-colors notranslate">🖨️</div>
-                  <span class="text-xl font-bold text-slate-800">Scan Physical Copy</span>
-                  <span class="text-sm text-slate-500 font-medium">Place on kiosk scanner bed</span>
+          <div class="flex flex-col gap-2.5">
+              <!-- Physical Scan Option -->
+              <button onclick="simulateUpload('Scanner')" class="bg-white border-2 border-slate-200 rounded-2xl p-4 hover:border-[#6d6ca2] hover:bg-indigo-50/30 transition-all flex items-center gap-3.5 text-left group">
+                  <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-[#6d6ca2] group-hover:bg-[#6d6ca2] group-hover:text-white transition-colors notranslate"><svg class="w-5 h-5 inline-block -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></div>
+                  <div class="flex-1">
+                    <span class="text-sm font-bold text-slate-900 block">Scan Physical Copy</span>
+                    <span class="text-[11px] text-slate-500 font-medium">Place document on kiosk scanner bed</span>
+                  </div>
               </button>
               
               <!-- DigiLocker Option -->
-              <button onclick="simulateUpload('DigiLocker')" class="flex-1 bg-white border-2 border-slate-200 rounded-2xl p-8 hover:bg-sky-50 hover:border-sky-600 transition-all group flex flex-col items-center gap-4">
-                  <div class="w-20 h-20 bg-sky-50 rounded-full flex items-center justify-center text-4xl group-hover:bg-sky-100 transition-colors notranslate">☁️</div>
-                  <span class="text-xl font-bold text-slate-800">Fetch from DigiLocker</span>
-                  <span class="text-sm text-slate-500 font-medium">Secure cloud import</span>
+              <button onclick="simulateUpload('DigiLocker')" class="bg-white border-2 border-slate-200 rounded-2xl p-4 hover:border-sky-500 hover:bg-sky-50/40 transition-all flex items-center gap-3.5 text-left group">
+                  <div class="w-12 h-12 bg-sky-50 rounded-xl flex items-center justify-center text-sky-600 group-hover:bg-sky-600 group-hover:text-white transition-colors notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"/></svg></div>
+                  <div class="flex-1">
+                    <span class="text-sm font-bold text-slate-900 block">Fetch from DigiLocker</span>
+                    <span class="text-[11px] text-slate-500 font-medium">Direct instant digital verification</span>
+                  </div>
               </button>
           </div>
-          
-          <button onclick="closeUploadModal()" class="mt-2 text-slate-500 font-bold text-lg hover:text-slate-800 transition-colors">Cancel</button>
+
+          <button onclick="closeUploadModal()" class="text-xs font-bold text-slate-400 hover:text-slate-600 pt-1">
+              Cancel
+          </button>
       </div>
     </div>
 
-    <!-- Timeout Modal Overlay -->
-    <div id="timeout-modal" class="hidden absolute inset-0 bg-slate-900/80 z-[100] flex items-center justify-center backdrop-blur-sm transition-opacity">
-      <div class="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl border border-slate-200 text-center flex flex-col gap-6 animate-[fadeIn_0.2s_ease-out]">
-          <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-4xl mx-auto notranslate">⏳</div>
-          <h2 class="text-3xl font-extrabold text-slate-900">Are you still there?</h2>
-          <p class="text-lg text-slate-600 font-medium">Your session will expire in <span id="warning-countdown" class="font-bold text-[#6d6ca2] text-2xl notranslate">10</span> seconds to protect your privacy.</p>
-          <button onclick="extendSession(event)" class="btn-primary bg-[#6d6ca2] text-white mt-4 w-full">OK, Continue</button>
+    <!-- Timeout Warning Modal Overlay (Graceful Degradation & Error Prevention) -->
+    <div id="timeout-modal" class="hidden absolute inset-0 bg-slate-900/80 z-50 flex items-center justify-center backdrop-blur-xs transition-opacity p-4">
+      <div class="bg-white rounded-3xl p-6 max-w-xs w-full shadow-2xl border border-slate-200 text-center flex flex-col items-center gap-3 animate-[fadeIn_0.15s_ease-out]">
+          <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-1 notranslate"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div>
+          <h2 class="text-xl font-extrabold text-slate-900">Are you still there?</h2>
+          <p class="text-xs text-slate-600 font-medium leading-relaxed">
+            Your session will expire in <span id="warning-countdown" class="font-bold text-[#6d6ca2] text-lg font-mono notranslate">10</span> seconds to safeguard your privacy.
+          </p>
+          <button onclick="extendSession(event)" class="btn-primary bg-[#6d6ca2] text-white rounded-xl w-full py-3 text-sm mt-2">
+            Continue Session
+          </button>
       </div>
     </div>
 
@@ -838,49 +1192,48 @@
   let authInput = '';    // Current value being typed
   let authPhone = '';    // Stored phone number for display in Step 3
   
-  let currentTotalSteps = 4; // Tracks dynamic progress bar length
-
-  // Explicitly list classes for selection so the Tailwind CDN doesn't purge them or fail on pseudo-classes
-  const activeCardClasses = ['bg-indigo-50', 'border-[#6d6ca2]', 'ring-2', 'ring-[#6d6ca2]'];
+  // Selection classes
+  const activeCardClasses = ['bg-indigo-50/80', 'border-[#6d6ca2]', 'ring-2', 'ring-[#6d6ca2]'];
   const inactiveCardClasses = ['bg-white', 'border-slate-200'];
+
+  // Step name mapping for top status indicator (Miller's Law & Jakob's Law)
+  const screenMeta = {
+    'screen-03': { name: 'Main Services', pct: 0 },
+    'screen-04': { name: 'Get Aadhaar', pct: 20 },
+    'screen-05': { name: 'Update Details', pct: 20 },
+    'screen-06': { name: 'Security Options', pct: 20 },
+    'screen-07': { name: 'Identity Check', pct: 40 },
+    'screen-08': { name: 'Download PDF', pct: 75 },
+    'screen-10': { name: 'PVC Order Preview', pct: 60 },
+    'screen-11': { name: 'Track Request', pct: 30 },
+    'screen-12-input': { name: 'Address Form', pct: 50 },
+    'screen-12-verify': { name: 'Verify Address', pct: 80 },
+    'screen-13': { name: 'Select Demographic', pct: 30 },
+    'screen-13-input': { name: 'Enter Details', pct: 55 },
+    'screen-13-verify': { name: 'Verify Details', pct: 80 },
+    'screen-biometric-update': { name: 'Biometrics Scan', pct: 65 },
+    'screen-14': { name: 'Document Upload', pct: 55 },
+    'screen-16': { name: 'Aadhaar Lock', pct: 60 },
+    'screen-17': { name: 'Biometric Lock', pct: 60 },
+    'screen-18': { name: 'Virtual ID', pct: 60 },
+    'screen-21': { name: 'Payment Gateway', pct: 90 },
+    'screen-19': { name: 'Confirmation', pct: 100 },
+    'screen-09': { name: 'Completed', pct: 100 },
+    'screen-15': { name: 'Status Timeline', pct: 100 }
+  };
   
   function updateProgressBar(screenId) {
     const pb = document.getElementById('top-progress');
+    const stepNameEl = document.getElementById('step-name');
+    const fillEl = document.getElementById('progress-fill');
     if (!pb) return;
     
-    let percent = 0;
-    let showBar = true;
-
-    if (['screen-03', 'screen-04', 'screen-05', 'screen-06'].includes(screenId)) {
-        percent = 0;
-    }
-    else if (screenId === 'screen-13' || screenId === 'screen-11') {
-        percent = 25;
-    }
-    else if (screenId === 'screen-07') {
-        percent = 35;
-    }
-    else if (['screen-12-input', 'screen-13-input', 'screen-10', 'screen-14', 'screen-08', 'screen-16', 'screen-17', 'screen-18'].includes(screenId)) {
-        percent = 60;
-    }
-    else if (['screen-12-verify', 'screen-13-verify'].includes(screenId)) {
-        percent = 80;
-    }
-    else if (screenId === 'screen-21') {
-        percent = 90;
-    }
-    else if (['screen-19', 'screen-09', 'screen-15'].includes(screenId)) {
-        percent = 100;
-    }
-    else {
-        showBar = false;
-    }
-
-    if (showBar) {
-        pb.classList.remove('hidden');
-        document.getElementById('progress-fill').style.width = `${percent}%`;
+    if (screenMeta[screenId]) {
+      pb.classList.remove('hidden');
+      stepNameEl.innerText = screenMeta[screenId].name;
+      fillEl.style.width = `${screenMeta[screenId].pct}%`;
     } else {
-        pb.classList.add('hidden');
+      pb.classList.add('hidden');
     }
   }
 
@@ -889,36 +1242,48 @@
       screenStack.push(currentScreen);
     }
     document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
-    document.getElementById(screenId).classList.remove('hidden');
+    const target = document.getElementById(screenId);
+    if (target) {
+      target.classList.remove('hidden');
+    }
     currentScreen = screenId;
-    updateNav(screenId);
-    
-    // Setup Auth Screen if triggered
+
+    // Show/hide bottom nav
+    const bottomNav = document.getElementById('bottom-nav');
+    if (['screen-01', 'screen-20'].includes(screenId)) {
+      bottomNav.classList.add('hidden');
+    } else {
+      bottomNav.classList.remove('hidden');
+    }
+
+    // Reset authentication flow when entering auth screen
     if (screenId === 'screen-07') {
       resetAuth();
     }
-    
-    // Copy input details to verification screens
+
+    // Dynamic field previews
     if (screenId === 'screen-12-verify') {
-      const co = document.getElementById('addr-co').value.trim();
-      const house = document.getElementById('addr-house').value.trim();
-      const street = document.getElementById('addr-street').value.trim();
-      const area = document.getElementById('addr-area').value.trim();
-      const city = document.getElementById('addr-city').value.trim();
-      const state = document.getElementById('addr-state').value.trim();
-      const pincode = document.getElementById('addr-pincode').value.trim();
+      const co = document.getElementById('addr-co')?.value.trim();
+      const house = document.getElementById('addr-house')?.value.trim();
+      const street = document.getElementById('addr-street')?.value.trim();
+      const area = document.getElementById('addr-area')?.value.trim();
+      const city = document.getElementById('addr-city')?.value.trim();
+      const state = document.getElementById('addr-state')?.value.trim();
+      const pincode = document.getElementById('addr-pincode')?.value.trim();
       
       const fullAddress = [co, house, street, area, city, state, pincode].filter(Boolean).join(', ');
-      document.getElementById('verify-address-text').innerText = fullAddress || '(No details provided)';
+      const vText = document.getElementById('verify-address-text');
+      if (vText) vText.innerText = fullAddress || 'Flat 402, Green Valley Apartments, Mumbai, Maharashtra, 400069';
     }
     
     if (screenId === 'screen-13-verify') {
       let val = '';
-      if (currentUpdateMode === 'name') val = document.getElementById('input-name').value.trim();
-      if (currentUpdateMode === 'dob') val = document.getElementById('input-dob').value;
+      if (currentUpdateMode === 'name') val = document.getElementById('input-name')?.value.trim();
+      if (currentUpdateMode === 'dob') val = document.getElementById('input-dob')?.value;
       if (currentUpdateMode === 'gender') val = selectedGender;
       
-      document.getElementById('verify-info-text').innerText = val || '(Not Provided)';
+      const infoText = document.getElementById('verify-info-text');
+      if (infoText) infoText.innerText = val || 'Rahul K Sharma';
     }
 
     if (screenId === 'screen-20') {
@@ -932,7 +1297,7 @@
       resetSessionTimer();
     }
     
-    // Refresh floating progress bar based on new screen
+    // Refresh floating progress bar
     updateProgressBar(screenId);
   }
 
@@ -942,10 +1307,17 @@
       document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
       document.getElementById(prev).classList.remove('hidden');
       currentScreen = prev;
-      updateNav(currentScreen);
-      updateProgressBar(currentScreen);
+      
+      const bottomNav = document.getElementById('bottom-nav');
+      if (['screen-01', 'screen-20'].includes(prev)) {
+        bottomNav.classList.add('hidden');
+      } else {
+        bottomNav.classList.remove('hidden');
+      }
+
+      updateProgressBar(prev);
     } else {
-      goHome();
+      navigateTo('screen-01');
     }
   }
 
@@ -956,49 +1328,21 @@
 
   function cancelSession() {
     screenStack.length = 0;
+    stopSessionTimer();
     navigateTo('screen-20');
   }
 
-  function updateNav(screenId) {
-    const bottomNav = document.getElementById('bottom-nav');
-    const screen = document.getElementById(screenId);
-    
-    if (['screen-01', 'screen-20'].includes(screenId)) {
-      bottomNav.classList.add('hidden');
-    } else {
-      bottomNav.classList.remove('hidden');
-    }
-
-    // Reset screen selection state upon entry
-    selectedAction = null;
-    if(screen) {
-      screen.querySelectorAll('.menu-card').forEach(el => {
-        el.classList.remove(...activeCardClasses);
-        el.classList.add(...inactiveCardClasses);
-      });
-      const continueBtn = screen.querySelector('.continue-btn');
-      if (continueBtn) {
-        continueBtn.disabled = true;
-        continueBtn.classList.remove('bg-[#6d6ca2]', 'text-white', 'shadow-md');
-        continueBtn.classList.add('bg-slate-300', 'text-slate-500');
-      }
-    }
-  }
-
   function selectCard(btn, action) {
-    // Deselect siblings explicitly
     const container = btn.parentElement;
     container.querySelectorAll('.menu-card').forEach(el => {
       el.classList.remove(...activeCardClasses);
       el.classList.add(...inactiveCardClasses);
     });
     
-    // Select this card explicitly
     btn.classList.remove(...inactiveCardClasses);
     btn.classList.add(...activeCardClasses);
     selectedAction = action;
 
-    // Enable continue button within the same screen
     const screen = btn.closest('.screen');
     const continueBtn = screen.querySelector('.continue-btn');
     if (continueBtn) {
@@ -1014,7 +1358,6 @@
   }
 
   function triggerGoogleTranslate(langCode) {
-    // Set the language selection programmatically in the google translate widget
     const translateDropdown = document.querySelector(".goog-te-combo");
     if (translateDropdown) {
         translateDropdown.value = langCode;
@@ -1024,9 +1367,9 @@
 
   function executeSelection() {
     if (!selectedAction) return;
-    
-    if (currentScreen === 'screen-02' && selectedLanguageCode) {
-        triggerGoogleTranslate(selectedLanguageCode);
+
+    if (currentScreen === 'screen-02') {
+      triggerGoogleTranslate(selectedLanguageCode);
     }
     
     if (selectedAction.startsWith('screen-')) {
@@ -1046,19 +1389,18 @@
     document.getElementById('dynamic-form-gender').classList.add('hidden');
     document.getElementById('dynamic-form-' + mode).classList.remove('hidden');
     
-    // Reset gender selection
     selectedGender = '';
     const btnContinue = document.getElementById('btn-demo-continue');
-    btnContinue.disabled = (mode === 'gender');
+    if (btnContinue) btnContinue.disabled = (mode === 'gender');
   }
 
   function selectGender(btn, gender) {
     selectCard(btn, 'gender');
     selectedGender = gender;
-    document.getElementById('btn-demo-continue').disabled = false;
+    const btnContinue = document.getElementById('btn-demo-continue');
+    if (btnContinue) btnContinue.disabled = false;
   }
 
-  // --- Document Selection Logic ---
   function checkDocSelection(selectId, btnId) {
     const selectEl = document.getElementById(selectId);
     const btnEl = document.getElementById(btnId);
@@ -1099,33 +1441,35 @@
     const subtitle = document.getElementById('auth-subtitle');
     const container = document.getElementById('auth-input-container');
     const authBtn = document.getElementById('auth-btn');
+    const badge = document.getElementById('auth-step-badge');
 
-    // Update Text and Display Formats based on current step
     if (authStep === 1) {
-      title.innerText = "Verify your identity";
-      subtitle.innerText = "Enter the last 4 digits of your Aadhaar Number.";
+      badge.innerText = "Step 1 of 3: Aadhaar Last 4";
+      title.innerText = "Verify your Aadhaar";
+      subtitle.innerText = "Enter the last 4 digits of your 12-digit Aadhaar Number.";
       container.innerHTML = `
-        <div class="text-3xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">XXXX</div>
-        <div class="text-3xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">XXXX</div>
-        <div class="text-4xl font-bold text-[#6d6ca2] tracking-widest px-6 min-w-[150px] text-center">${authInput.padEnd(4, '_')}</div>
+        <div class="text-xl font-bold text-slate-300 font-mono tracking-widest px-3 border-r border-slate-200">XXXX</div>
+        <div class="text-xl font-bold text-slate-300 font-mono tracking-widest px-3 border-r border-slate-200">XXXX</div>
+        <div class="text-2xl font-black text-[#6d6ca2] font-mono tracking-widest px-3 min-w-[90px] text-center">${authInput.padEnd(4, '•')}</div>
       `;
     } else if (authStep === 2) {
-      title.innerText = "Enter Mobile Number";
+      badge.innerText = "Step 2 of 3: Registered Mobile";
+      title.innerText = "Mobile Number";
       subtitle.innerText = "Enter your 10-digit registered mobile number.";
       container.innerHTML = `
-        <div class="text-4xl font-bold text-slate-400 tracking-widest px-6 border-r-2 border-slate-200">+91</div>
-        <div class="text-4xl font-bold text-[#6d6ca2] tracking-widest px-6 min-w-[280px] text-center">${authInput.padEnd(10, '_')}</div>
+        <div class="text-lg font-bold text-slate-400 font-mono px-3 border-r border-slate-200">+91</div>
+        <div class="text-xl font-black text-[#6d6ca2] font-mono tracking-wider px-3 min-w-[180px] text-center">${authInput.padEnd(10, '•')}</div>
       `;
     } else if (authStep === 3) {
+      badge.innerText = "Step 3 of 3: One-Time Password";
       title.innerText = "Enter OTP";
-      subtitle.innerText = "Enter the 4-digit OTP sent to +91 " + authPhone + ".";
-      const otpDisplay = authInput.padEnd(4, '_').split('').join(' ');
+      subtitle.innerText = "Enter 4-digit code sent to +91 " + authPhone + ".";
+      const otpDisplay = authInput.padEnd(4, '•').split('').join(' ');
       container.innerHTML = `
-        <div class="text-5xl font-bold text-[#6d6ca2] tracking-widest px-8 min-w-[200px] text-center">${otpDisplay}</div>
+        <div class="text-3xl font-black text-[#6d6ca2] font-mono tracking-widest px-4 min-w-[140px] text-center">${otpDisplay}</div>
       `;
     }
 
-    // Validation for continue button
     let isValid = false;
     if (authStep === 1 && authInput.length === 4) isValid = true;
     if (authStep === 2 && authInput.length === 10) isValid = true;
@@ -1153,7 +1497,6 @@
       authInput = '';
       updateAuthUI();
     } else if (authStep === 3 && authInput.length === 4) {
-      // Finished all 3 steps successfully!
       navigateTo(authNextScreen);
     }
   }
@@ -1162,12 +1505,55 @@
 
   let pendingTitle = '';
   let pendingSubtitle = '';
+  let pendingFee = '₹50.00';
+  let bioScanned = { fp: false, iris: false, photo: false };
 
-  function confirmAction(title, subtitle, requiresPayment = false) {
+  function simulateBioScan(type) {
+    const badge = document.getElementById('bio-sensor-badge');
+    const msg = document.getElementById('bio-sensor-msg');
+    
+    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 animate-pulse';
+    badge.innerText = 'Scanning...';
+    
+    if (type === 'fp') {
+      msg.innerText = 'Capturing fingerprint slap scans... Hold fingers steady on glass.';
+    } else if (type === 'iris') {
+      msg.innerText = 'Aligning dual-eye optical sensor... Look into camera.';
+    } else if (type === 'photo') {
+      msg.innerText = 'Focusing HD camera... Capturing portrait photo.';
+    }
+
+    setTimeout(() => {
+      bioScanned[type] = true;
+      badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700';
+      badge.innerText = 'Captured';
+      
+      const statusEl = document.getElementById('bio-status-' + type);
+      const iconEl = document.getElementById('bio-icon-' + type);
+      const btnEl = document.getElementById('btn-scan-' + type);
+      
+      statusEl.className = 'text-[10px] font-bold text-emerald-600 mb-2.5';
+      statusEl.innerText = 'High Quality';
+      iconEl.className = 'w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mb-1.5 notranslate';
+      btnEl.className = 'w-full py-2 px-2 bg-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-none cursor-default';
+      btnEl.innerText = 'Rescan';
+
+      msg.innerText = 'Biometric record registered with UIDAI biometric compliance standards.';
+
+      if (bioScanned.fp || bioScanned.iris || bioScanned.photo) {
+        document.getElementById('btn-bio-submit').disabled = false;
+      }
+    }, 1100);
+  }
+
+  function confirmAction(title, subtitle, requiresPayment = false, fee = '₹50.00') {
     pendingTitle = title;
     pendingSubtitle = subtitle;
+    pendingFee = fee;
     
     if (requiresPayment) {
+        const amtEl = document.getElementById('payment-amount-display');
+        if (amtEl) amtEl.innerText = fee;
         navigateTo('screen-21');
     } else {
         document.getElementById('confirm-title').innerText = title;
@@ -1181,19 +1567,17 @@
     document.getElementById('payment-processing-view').classList.remove('hidden');
     document.getElementById('payment-processing-view').classList.add('flex');
     
-    // Simulate API processing delay
     setTimeout(() => {
         document.getElementById('confirm-title').innerText = pendingTitle;
         document.getElementById('confirm-subtitle').innerText = pendingSubtitle;
         navigateTo('screen-19');
         
-        // Restore for future visits seamlessly in the background
         setTimeout(() => {
             document.getElementById('payment-processing-view').classList.add('hidden');
             document.getElementById('payment-processing-view').classList.remove('flex');
             document.getElementById('payment-selection-view').classList.remove('hidden');
         }, 1000);
-    }, 2000);
+    }, 1800);
   }
 
   function showStatusTimeline() {
@@ -1220,16 +1604,14 @@
 
   function simulateUpload(method) {
     if (activeUploadButton) {
-      // Visually update the original button to show success
       activeUploadButton.innerHTML = `
-          <div class="flex items-center justify-center gap-3">
-              <span class="text-3xl notranslate">✓</span>
-              <span class="text-lg font-bold">Attached via ${method}</span>
+          <div class="flex items-center justify-center gap-2">
+              <span class="text-xs text-emerald-600 font-bold uppercase notranslate">[Verified]</span>
+              <span class="text-xs font-bold text-emerald-800">Attached via ${method}</span>
           </div>
       `;
-      // Swap out the dashed grey border styles for solid emerald success styles
-      activeUploadButton.classList.remove('border-dashed', 'border-slate-300', 'text-slate-500', 'hover:bg-slate-100', 'hover:bg-slate-50');
-      activeUploadButton.classList.add('border-solid', 'border-emerald-500', 'bg-emerald-50', 'text-emerald-700');
+      activeUploadButton.classList.remove('border-dashed', 'border-slate-300', 'text-slate-500');
+      activeUploadButton.classList.add('border-solid', 'border-emerald-500', 'bg-emerald-50');
     }
     closeUploadModal();
   }
@@ -1237,11 +1619,12 @@
   let countdownTimer;
   function startCountdown() {
     let count = 10;
-    document.getElementById('countdown').innerText = count;
+    const cEl = document.getElementById('countdown');
+    if (cEl) cEl.innerText = count;
     clearInterval(countdownTimer);
     countdownTimer = setInterval(() => {
       count--;
-      document.getElementById('countdown').innerText = count;
+      if (cEl) cEl.innerText = count;
       if (count <= 0) {
         clearInterval(countdownTimer);
         navigateTo('screen-01');
@@ -1269,7 +1652,7 @@
           currentAttractIdx = (currentAttractIdx + 1) % attractTexts.length;
           btnText.innerText = attractTexts[currentAttractIdx];
           btnText.style.opacity = '1';
-        }, 500); // Wait for fade out
+        }, 300);
       }
     }
   }, 3000);
@@ -1347,6 +1730,3 @@
 </script>
 </body>
 </html>
-
-
-
