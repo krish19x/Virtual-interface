@@ -1175,18 +1175,50 @@
      Accurate proportions, layered cloth, facial anatomy, natural eyes, and organic motion
   ------------------------------------------------------------- */
 
-        // =========================================================================
+          // =========================================================================
   // SPORTS TURF VR HIGH-FIDELITY CHARACTER SYSTEM & PBR RENDERING ENGINE
   // Sourced from Sports_Turf_VR.html:
   // - Fully rigged, skinned skeletal humanoid characters (Ch38) with anatomically realistic human faces
   // - 13 motion-captured skeletal animation clips (Idle, Walking, Jogging, Passing, Header, etc.)
-  // - Root-motion stabilization & AnimationMixer blending
+  // - Root-motion stabilization & proper Three.js SkinnedMesh Skeleton Cloning
   // - Customized wardrobe: Shirt, Shorts/Pants, Socks, Shoes, Skin Tone, Hair Color
   // =========================================================================
 
   let gltfPlayerBase = null;
   let playerAnimations = {};
   let characterMixers = [];
+
+  // Proper SkinnedMesh hierarchy clone with bone-skeleton re-binding
+  // Sourced directly from Sports_Turf_VR.html function Of(source)
+  function cloneSkinnedCharacter(source) {
+    const cloneLookup = new Map();
+    const origLookup = new Map();
+
+    const cloned = source.clone(true);
+
+    function mapNodes(origNode, cloneNode) {
+      origLookup.set(origNode, cloneNode);
+      cloneLookup.set(cloneNode, origNode);
+      for (let i = 0; i < origNode.children.length; i++) {
+        mapNodes(origNode.children[i], cloneNode.children[i]);
+      }
+    }
+    mapNodes(source, cloned);
+
+    cloned.traverse(node => {
+      if (!node.isSkinnedMesh) return;
+      const origMesh = cloneLookup.get(node);
+      if (!origMesh || !origMesh.skeleton) return;
+
+      const origBones = origMesh.skeleton.bones;
+      node.skeleton = origMesh.skeleton.clone();
+      node.bindMatrix.copy(origMesh.bindMatrix);
+      node.skeleton.bones = origBones.map(b => origLookup.get(b) || b);
+      node.bind(node.skeleton, node.bindMatrix);
+    });
+
+    return cloned;
+  }
 
   // Skin tone palette from Sports_Turf_VR
   const TURF_SKIN_PALETTE = [
@@ -1256,7 +1288,7 @@
     }
   }
 
-  // Sports_Turf_VR Character Factory
+  // Sports_Turf_VR Character Factory with Proper SkinnedMesh Skeleton Rebinding
   function createTurfPerson(config) {
     const {
       x = 0, z = 0, rotY = 0,
@@ -1278,8 +1310,8 @@
       return null;
     }
 
-    // Clone the skeletal hierarchy properly
-    const charRoot = gltfPlayerBase.clone(true);
+    // Clone the skeletal hierarchy properly with full skeleton bone rebinding
+    const charRoot = cloneSkinnedCharacter(gltfPlayerBase);
 
     // Accurate human scale calibration
     const nativeH = gltfPlayerBase.userData.nativeHeight || 1.76;
@@ -1377,7 +1409,7 @@
     return charController;
   }
 
-  // Populate the 7 Human Citizens with Sports_Turf_VR High-Definition Character Models
+  // Populate the 7 Human Citizens with Correct Station Coordinates (Clear of all dividers)
   async function buildHumanCharacters() {
     await loadTurfCharacterModel();
 
@@ -1387,8 +1419,9 @@
     }
 
     // Citizen 1: Kiosk 1 Occupant updating demographics
+    // Kiosk 1 is at X = -4.6, Z = -0.6. Standing in front of kiosk facing screen:
     const user1 = createTurfPerson({
-      x: -4.6, z: 0.16, rotY: Math.PI,
+      x: -4.6, z: 0.52, rotY: 0, // rotY=0 faces toward -Z (looking at kiosk)
       height: 1.76,
       shirt: 0x0369a1, // Ocean blue button-up
       shorts: 0x1e293b, // Indigo denim trousers
@@ -1405,8 +1438,9 @@
     }
 
     // Citizen 2: Kiosk 3 Occupant performing biometric verification
+    // Kiosk 3 is at X = 1.6, Z = -0.6. Standing in front of kiosk facing screen:
     const user3 = createTurfPerson({
-      x: 1.6, z: 0.18, rotY: Math.PI,
+      x: 1.6, z: 0.52, rotY: 0,
       height: 1.70,
       shirt: 0x047857, // Emerald green
       shorts: 0xf8fafc, // Crisp off-white trousers
@@ -1423,8 +1457,9 @@
     }
 
     // Citizen 3: Kiosk 4 Occupant senior citizen
+    // Kiosk 4 is at X = 4.6, Z = -0.6. Standing in front of kiosk facing screen:
     const user4 = createTurfPerson({
-      x: 4.6, z: 0.17, rotY: Math.PI,
+      x: 4.6, z: 0.52, rotY: 0,
       height: 1.72,
       shirt: 0xb45309, // Saffron amber shirt
       shorts: 0x334155, // Charcoal trousers
@@ -1565,7 +1600,7 @@
         }
       } else if (ctrl.pose === 'touching') {
         // Natural weight shift during kiosk session
-        root.rotation.y = Math.PI + Math.sin(elapsed * 0.8 + (root.position.x * 2.0)) * 0.035;
+        root.rotation.y = Math.sin(elapsed * 0.8 + (root.position.x * 2.0)) * 0.035;
       }
     });
   }
