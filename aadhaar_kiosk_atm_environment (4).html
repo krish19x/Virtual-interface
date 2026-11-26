@@ -1498,12 +1498,24 @@
     // Apply Professional Work Attire to Sub-Meshes
     let spineNode = null;
     let leftHandNode = null;
+    let rightArmBone = null;
+    let rightForeArmBone = null;
+    let rightHandBone = null;
+    let headBone = null;
 
     charRoot.traverse(child => {
       if (child.name && /Spine2/i.test(child.name)) {
         spineNode = child;
       } else if (child.name && /LeftForeArm/i.test(child.name)) {
         leftHandNode = child;
+      } else if (child.name && /RightArm$/i.test(child.name)) {
+        rightArmBone = child;
+      } else if (child.name && /RightForeArm$/i.test(child.name)) {
+        rightForeArmBone = child;
+      } else if (child.name && /RightHand$/i.test(child.name)) {
+        rightHandBone = child;
+      } else if (child.name && /Head$/i.test(child.name)) {
+        headBone = child;
       }
 
       if (!child.isMesh) return;
@@ -1660,6 +1672,11 @@
       speed: speed,
       path: path,
       targetIndex: 0,
+      rightArmBone: rightArmBone,
+      rightForeArmBone: rightForeArmBone,
+      rightHandBone: rightHandBone,
+      headBone: headBone,
+      tapPhase: Math.random() * Math.PI * 2,
       play(name, fadeTime = 0.3, timeScale = 1.0) {
         const act = actions[name];
         if (!act) return;
@@ -1693,9 +1710,9 @@
       return;
     }
 
-    // Citizen 1: Kiosk 1 Occupant - Office worker in crisp sky blue shirt, necktie & charcoal slacks
+    // Citizen 1: Kiosk 1 Occupant - Facing kiosk screen at X=-4.6, Z=-0.6
     const user1 = createTurfPerson({
-      x: -4.6, z: 0.52, rotY: 0,
+      x: -4.6, z: 0.36, rotY: Math.PI, // Facing -Z directly into kiosk screen
       height: 1.76,
       shirt: 0xdbeafe, // Crisp pale sky blue office button-up
       shorts: 0x334155, // Charcoal-grey pleated trousers
@@ -1714,9 +1731,9 @@
       humanCharacters.push(user1);
     }
 
-    // Citizen 2: Kiosk 3 Occupant - Executive in deep navy blazer tone with white shirt & tie
+    // Citizen 2: Kiosk 3 Occupant - Facing kiosk screen at X=1.6, Z=-0.6
     const user3 = createTurfPerson({
-      x: 1.6, z: 0.52, rotY: 0,
+      x: 1.6, z: 0.36, rotY: Math.PI, // Facing -Z directly into kiosk screen
       height: 1.72,
       shirt: 0x1e3a8a, // Professional navy office shirt
       shorts: 0x0f172a, // Pressed black trousers
@@ -1735,9 +1752,9 @@
       humanCharacters.push(user3);
     }
 
-    // Citizen 3: Kiosk 4 Occupant - Senior citizen professional with tie and salt-and-pepper hair
+    // Citizen 3: Kiosk 4 Occupant - Facing kiosk screen at X=4.6, Z=-0.6
     const user4 = createTurfPerson({
-      x: 4.6, z: 0.52, rotY: 0,
+      x: 4.6, z: 0.36, rotY: Math.PI, // Facing -Z directly into kiosk screen
       height: 1.74,
       shirt: 0xfef3c7, // Warm ivory-cream dress shirt
       shorts: 0x475569, // Slate grey trousers
@@ -1892,8 +1909,36 @@
           ctrl.play("Walking", 0.3, 0.95);
         }
       } else if (ctrl.pose === 'touching') {
-        // Natural weight shift during kiosk session
-        root.rotation.y = Math.sin(elapsed * 0.8 + (root.position.x * 2.0)) * 0.035;
+        // Face directly toward the kiosk screen (-Z direction) with subtle lifelike weight shifts
+        root.rotation.y = Math.PI + Math.sin(elapsed * 0.65 + (root.position.x * 1.5)) * 0.025;
+
+        // 1. Head looks slightly downward and forward directly at the touchscreen (Y ~ 1.385m)
+        if (ctrl.headBone) {
+          ctrl.headBone.rotation.x = -0.22 + Math.sin(elapsed * 0.5 + ctrl.tapPhase) * 0.03;
+          ctrl.headBone.rotation.y = Math.sin(elapsed * 0.4 + ctrl.tapPhase) * 0.04;
+        }
+
+        // 2. Right Arm reaches forward and taps the interactive touchscreen
+        // In Mixamo rig: RightArm rotation.x lifts forward/upward, rotation.z controls spread
+        if (ctrl.rightArmBone) {
+          const tapCycle = Math.sin(elapsed * 1.6 + ctrl.tapPhase);
+          // Lift upper arm forward toward screen
+          ctrl.rightArmBone.rotation.x = -0.95 + Math.sin(elapsed * 0.8 + ctrl.tapPhase) * 0.06;
+          ctrl.rightArmBone.rotation.y = 0.28;
+          ctrl.rightArmBone.rotation.z = -0.42;
+
+          // Forearm flexes forward
+          if (ctrl.rightForeArmBone) {
+            ctrl.rightForeArmBone.rotation.x = -0.62 + Math.max(0, tapCycle) * 0.18;
+            ctrl.rightForeArmBone.rotation.y = 0.35;
+          }
+
+          // Hand performs finger-tapping gesture onto the glass
+          if (ctrl.rightHandBone) {
+            ctrl.rightHandBone.rotation.x = -0.15 + tapCycle * 0.12;
+            ctrl.rightHandBone.rotation.z = 0.10;
+          }
+        }
       }
     });
   }
