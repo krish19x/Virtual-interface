@@ -18,6 +18,8 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="player_glb_data.js"></script>
   <script src="kiosk_obj_data.js"></script>
 
   <style>
@@ -1173,1138 +1175,318 @@
      Accurate proportions, layered cloth, facial anatomy, natural eyes, and organic motion
   ------------------------------------------------------------- */
 
-      // =========================================================================
-  // GTA V-INSPIRED AAA 3D GAME CHARACTER ENGINE
-  // Matches exact GTA V Pedestrian Art Direction from Reference:
-  // - High-fidelity mapped facial features (defined brows, deep-set eyes, 5 o'clock shadow, sculpted jaw)
-  // - Short-sleeve office button-up with chest pocket & laminated clip ID badge
-  // - Striped necktie with Windsor knot, black belt with metal prong buckle
-  // - Brown leather wristwatch on left arm, tailored grey pleated trousers, dress shoes
+        // =========================================================================
+  // SPORTS TURF VR HIGH-FIDELITY CHARACTER SYSTEM & PBR RENDERING ENGINE
+  // Sourced from Sports_Turf_VR.html:
+  // - Fully rigged, skinned skeletal humanoid characters (Ch38) with anatomically realistic human faces
+  // - 13 motion-captured skeletal animation clips (Idle, Walking, Jogging, Passing, Header, etc.)
+  // - Root-motion stabilization & AnimationMixer blending
+  // - Customized wardrobe: Shirt, Shorts/Pants, Socks, Shoes, Skin Tone, Hair Color
   // =========================================================================
 
-  // Compatibility alias
-  function createPhotorealisticSkinTexture(baseColorHex, seed = 0) {
-    return createGtaSkinTexture(baseColorHex, seed);
+  let gltfPlayerBase = null;
+  let playerAnimations = {};
+  let characterMixers = [];
+
+  // Skin tone palette from Sports_Turf_VR
+  const TURF_SKIN_PALETTE = [
+    [0.86, 0.76, 0.68], // Warm light tan
+    [0.72, 0.60, 0.52], // Medium golden tan (GTA / Reference tone)
+    [0.60, 0.48, 0.40], // Deep warm brown
+    [0.95, 0.88, 0.82], // Fair skin
+    [0.66, 0.54, 0.46], // Melanin rich olive-brown
+    [1.00, 1.00, 1.00]  // Natural neutral
+  ];
+
+  // Hair color palette from Sports_Turf_VR
+  const TURF_HAIR_PALETTE = [
+    0x1a1a1c, // Natural soft black
+    0x2a1a14, // Dark chocolate brown
+    0x0e0e10, // Deep jet black
+    0x3a2c20, // Auburn / chestnut
+    0x71717a  // Salt-and-pepper silver
+  ];
+
+  // Asynchronous Loader for Rigged GLB Human Characters
+  async function loadTurfCharacterModel() {
+    if (!window.PLAYER_GLB_BASE64 || !THREE.GLTFLoader) {
+      console.warn("GLTFLoader or PLAYER_GLB_BASE64 not available");
+      return;
+    }
+
+    try {
+      const binStr = atob(window.PLAYER_GLB_BASE64);
+      const len = binStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binStr.charCodeAt(i);
+      }
+
+      const loader = new THREE.GLTFLoader();
+      const gltf = await new Promise((resolve, reject) => {
+        loader.parse(bytes.buffer, '', resolve, reject);
+      });
+
+      // Extract and stabilize animation tracks (Root motion hip cancellation from Sports_Turf_VR)
+      for (let clip of gltf.animations) {
+        const clonedClip = clip.clone();
+        clonedClip.tracks.forEach(track => {
+          if (/Hips\.position$/.test(track.name)) {
+            const vals = track.values;
+            const fixedX = vals[0];
+            const fixedZ = vals[2];
+            for (let h = 0; h < vals.length; h += 3) {
+              vals[h] = fixedX;
+              vals[h + 2] = fixedZ;
+            }
+          }
+        });
+        playerAnimations[clip.name] = clonedClip;
+      }
+
+      gltf.scene.updateMatrixWorld(true);
+      const bbox = new THREE.Box3().setFromObject(gltf.scene);
+      gltf.scene.userData.nativeHeight = bbox.max.y - bbox.min.y;
+      gltfPlayerBase = gltf.scene;
+
+      console.log("Sports_Turf_VR character rig loaded successfully with", Object.keys(playerAnimations).length, "animations.");
+      return gltfPlayerBase;
+    } catch (err) {
+      console.error("Error loading Sports_Turf_VR character:", err);
+    }
   }
 
-  // 1. High-Detail GTA V Skin Texture with Subsurface Scattering & Micro-Pore Grain
-  function createGtaSkinTexture(baseColorHex, seed = 0) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-
-    const baseCol = new THREE.Color(baseColorHex);
-    ctx.fillStyle = baseCol.getStyle();
-    ctx.fillRect(0, 0, 512, 512);
-
-    // Dermal SSS warm glow gradient
-    const sssGrad = ctx.createRadialGradient(256, 256, 40, 256, 256, 256);
-    sssGrad.addColorStop(0, 'rgba(239, 68, 68, 0.08)');
-    sssGrad.addColorStop(0.5, 'rgba(217, 119, 6, 0.06)');
-    sssGrad.addColorStop(1, 'rgba(180, 83, 9, 0.0)');
-    ctx.fillStyle = sssGrad;
-    ctx.fillRect(0, 0, 512, 512);
-
-    // Natural epidermal micro-freckles and subtle skin tone modulation
-    for (let i = 0; i < 110; i++) {
-      const x = (Math.sin(i * 14.1 + seed) * 0.5 + 0.5) * 512;
-      const y = (Math.cos(i * 9.3 + seed) * 0.5 + 0.5) * 512;
-      const r = 16 + (i % 28);
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(244, 63, 94, 0.035)' : 'rgba(245, 158, 11, 0.03)';
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // High-frequency skin pores and micro-grain
-    const imgData = ctx.getImageData(0, 0, 512, 512);
-    const data = imgData.data;
-    for (let p = 0; p < data.length; p += 4) {
-      const n = (Math.random() - 0.5) * 11;
-      data[p] = Math.min(255, Math.max(0, data[p] + n));
-      data[p + 1] = Math.min(255, Math.max(0, data[p + 1] + n * 0.75));
-      data[p + 2] = Math.min(255, Math.max(0, data[p + 2] + n * 0.55));
-    }
-    ctx.putImageData(imgData, 0, 0);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(2, 2);
-    return tex;
-  }
-
-  // 2. Specialized GTA V Head & Face Texture (Equirectangular UV Map matching Reference)
-  function createGtaFaceTexture(baseSkinHex, hairHex, hasBeard = false, hasStubble = true) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-
-    const baseCol = new THREE.Color(baseSkinHex);
-    ctx.fillStyle = baseCol.getStyle();
-    ctx.fillRect(0, 0, 1024, 512);
-
-    // Subsurface warmth on cheeks, nose and ears
-    const warmCheekL = ctx.createRadialGradient(420, 270, 10, 420, 270, 90);
-    warmCheekL.addColorStop(0, 'rgba(239, 68, 68, 0.12)');
-    warmCheekL.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
-    ctx.fillStyle = warmCheekL;
-    ctx.fillRect(320, 180, 200, 180);
-
-    const warmCheekR = ctx.createRadialGradient(604, 270, 10, 604, 270, 90);
-    warmCheekR.addColorStop(0, 'rgba(239, 68, 68, 0.12)');
-    warmCheekR.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
-    ctx.fillStyle = warmCheekR;
-    ctx.fillRect(504, 180, 200, 180);
-
-    // GTA V Styled Dark High-Density Hairline & Scalp Texture (Buzz cut / short crop)
-    const hairCol = new THREE.Color(hairHex);
-    // Back and sides scalp fade
-    ctx.fillStyle = hairCol.getStyle();
-    ctx.fillRect(0, 0, 1024, 140);
-
-    // Front forehead hairline contour (curving down naturally on sides, arched front)
-    ctx.beginPath();
-    ctx.moveTo(320, 140);
-    ctx.bezierCurveTo(400, 150, 480, 155, 512, 155);
-    ctx.bezierCurveTo(544, 155, 624, 150, 704, 140);
-    ctx.lineTo(760, 200);
-    ctx.lineTo(1024, 200);
-    ctx.lineTo(1024, 0);
-    ctx.lineTo(0, 0);
-    ctx.lineTo(0, 200);
-    ctx.lineTo(264, 200);
-    ctx.closePath();
-    ctx.fill();
-
-    // Hair micro-stipple for buzz cut texture
-    for (let i = 0; i < 3500; i++) {
-      const hx = Math.random() * 1024;
-      const hy = Math.random() * 175;
-      ctx.fillStyle = Math.random() > 0.4 ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.1)';
-      ctx.fillRect(hx, hy, 1.5, 1.5);
-    }
-
-    // 5 o'clock stubble shadow around jaw, chin and upper lip (Iconic GTA V look from reference)
-    if (hasStubble || hasBeard) {
-      const stubbleGrad = ctx.createRadialGradient(512, 360, 20, 512, 360, 150);
-      stubbleGrad.addColorStop(0, hasBeard ? 'rgba(15, 15, 18, 0.75)' : 'rgba(25, 25, 30, 0.42)');
-      stubbleGrad.addColorStop(0.65, hasBeard ? 'rgba(20, 20, 24, 0.55)' : 'rgba(30, 30, 35, 0.28)');
-      stubbleGrad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
-      ctx.fillStyle = stubbleGrad;
-      ctx.fillRect(360, 260, 304, 180);
-
-      // Micro stubble dots
-      const numDots = hasBeard ? 2800 : 1200;
-      for (let i = 0; i < numDots; i++) {
-        const sx = 380 + Math.random() * 264;
-        const sy = 285 + Math.random() * 140;
-        ctx.fillStyle = 'rgba(10, 10, 12, 0.45)';
-        ctx.fillRect(sx, sy, 1.2, 1.2);
-      }
-    }
-
-    // Prominent Thick Eyebrows (Reference has dark, authoritative straight-arching brows)
-    ctx.fillStyle = '#0f0f12';
-    // Left eyebrow
-    ctx.beginPath();
-    ctx.moveTo(410, 215);
-    ctx.quadraticCurveTo(455, 204, 495, 214);
-    ctx.lineTo(495, 224);
-    ctx.quadraticCurveTo(455, 216, 410, 222);
-    ctx.closePath();
-    ctx.fill();
-
-    // Right eyebrow
-    ctx.beginPath();
-    ctx.moveTo(529, 214);
-    ctx.quadraticCurveTo(569, 204, 614, 215);
-    ctx.lineTo(614, 222);
-    ctx.quadraticCurveTo(569, 216, 529, 224);
-    ctx.closePath();
-    ctx.fill();
-
-    // Deep-set eye orbital socket shadows
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
-    ctx.fillRect(418, 226, 72, 12);
-    ctx.fillRect(534, 226, 72, 12);
-
-    // Natural Nasolabial fold shadows (Smile/crease lines running from nose to corners of mouth)
-    ctx.strokeStyle = 'rgba(70, 35, 20, 0.28)';
-    ctx.lineWidth = 2.2;
-    // Left crease
-    ctx.beginPath();
-    ctx.moveTo(478, 275);
-    ctx.quadraticCurveTo(466, 305, 462, 335);
-    ctx.stroke();
-    // Right crease
-    ctx.beginPath();
-    ctx.moveTo(546, 275);
-    ctx.quadraticCurveTo(558, 305, 562, 335);
-    ctx.stroke();
-
-    // Natural lips with philtrum definition
-    const lipGrad = ctx.createLinearGradient(0, 330, 0, 360);
-    lipGrad.addColorStop(0, '#924a3e');
-    lipGrad.addColorStop(0.5, '#7c3a2f');
-    lipGrad.addColorStop(1, '#9e5346');
-    ctx.fillStyle = lipGrad;
-    // Upper lip
-    ctx.beginPath();
-    ctx.moveTo(466, 338);
-    ctx.quadraticCurveTo(490, 334, 512, 338);
-    ctx.quadraticCurveTo(534, 334, 558, 338);
-    ctx.quadraticCurveTo(512, 345, 466, 338);
-    ctx.fill();
-    // Lower lip
-    ctx.beginPath();
-    ctx.moveTo(470, 344);
-    ctx.quadraticCurveTo(512, 344, 554, 344);
-    ctx.quadraticCurveTo(512, 358, 470, 344);
-    ctx.fill();
-
-    // High frequency skin pores over full face
-    const imgData = ctx.getImageData(0, 0, 1024, 512);
-    const data = imgData.data;
-    for (let p = 0; p < data.length; p += 4) {
-      const n = (Math.random() - 0.5) * 8;
-      data[p] = Math.min(255, Math.max(0, data[p] + n));
-      data[p + 1] = Math.min(255, Math.max(0, data[p + 1] + n * 0.7));
-      data[p + 2] = Math.min(255, Math.max(0, data[p + 2] + n * 0.5));
-    }
-    ctx.putImageData(imgData, 0, 0);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    return tex;
-  }
-
-  // 3. Striped Office Necktie Texture Generator (Direct from GTA V reference)
-  function createGtaTieTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-
-    // Base slate blue-grey
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(0, 0, 128, 512);
-
-    // Diagonal silver & navy alternating stripes
-    const stripeWidth = 24;
-    for (let y = -256; y < 768; y += stripeWidth * 2) {
-      // Silver-white highlight stripe
-      ctx.fillStyle = '#cbd5e1';
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(128, y + 96);
-      ctx.lineTo(128, y + 96 + 10);
-      ctx.lineTo(0, y + 10);
-      ctx.fill();
-
-      // Deep navy accent line
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.moveTo(0, y + 14);
-      ctx.lineTo(128, y + 96 + 14);
-      ctx.lineTo(128, y + 96 + 18);
-      ctx.lineTo(0, y + 18);
-      ctx.fill();
-    }
-
-    // Shadow on edges of tie for depth
-    const edgeGrad = ctx.createLinearGradient(0, 0, 128, 0);
-    edgeGrad.addColorStop(0, 'rgba(0, 0, 0, 0.35)');
-    edgeGrad.addColorStop(0.2, 'rgba(0, 0, 0, 0.0)');
-    edgeGrad.addColorStop(0.8, 'rgba(0, 0, 0, 0.0)');
-    edgeGrad.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
-    ctx.fillStyle = edgeGrad;
-    ctx.fillRect(0, 0, 128, 512);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    return tex;
-  }
-
-  // 4. Laminated Security ID Badge Texture with Clip (Direct from reference chest pocket)
-  function createGtaIdBadgeTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 180;
-    const ctx = canvas.getContext('2d');
-
-    // Laminated card white background with plastic sleeve border
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.fillRect(4, 4, 120, 172);
-
-    // Blue header banner
-    ctx.fillStyle = '#1e3a8a';
-    ctx.fillRect(8, 8, 112, 28);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillText('STAFF ID', 32, 26);
-
-    // Portrait photo square
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(16, 44, 48, 56);
-    // Head silhouette
-    ctx.fillStyle = '#475569';
-    ctx.beginPath();
-    ctx.arc(40, 64, 14, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillRect(24, 78, 32, 22);
-
-    // Text lines for name & credentials
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(72, 50, 42, 6);
-    ctx.fillRect(72, 62, 36, 5);
-    ctx.fillRect(72, 74, 40, 5);
-    ctx.fillRect(72, 86, 28, 5);
-
-    // Barcode at bottom
-    ctx.fillStyle = '#0f172a';
-    for (let b = 16; b < 112; b += 4) {
-      if (Math.random() > 0.3) {
-        ctx.fillRect(b, 116, 2.5, 32);
-      }
-    }
-
-    // Outer plastic sleeve border with specular gleam
-    ctx.strokeStyle = 'rgba(203, 213, 225, 0.85)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(2, 2, 124, 176);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    return tex;
-  }
-
-  // 5. GTA V Procedural Eyeball & Cornea Texture
-  function createGtaEyeTexture(irisColorHex = 0x3d2314) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-
-    // Sclera base
-    ctx.fillStyle = '#fcfaf6';
-    ctx.fillRect(0, 0, 256, 256);
-
-    // Micro scleral capillaries
-    ctx.strokeStyle = 'rgba(225, 29, 72, 0.16)';
-    ctx.lineWidth = 1.0;
-    for (let v = 0; v < 8; v++) {
-      const a = (v / 8) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(128 + Math.cos(a) * 98, 128 + Math.sin(a) * 98);
-      ctx.quadraticCurveTo(
-        128 + Math.cos(a + 0.2) * 82, 128 + Math.sin(a + 0.2) * 82,
-        128 + Math.cos(a + 0.05) * 68, 128 + Math.sin(a + 0.05) * 68
-      );
-      ctx.stroke();
-    }
-
-    // Bold GTA V styled outer limbal ring
-    ctx.fillStyle = '#0a0a0a';
-    ctx.beginPath();
-    ctx.arc(128, 128, 64, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Vibrant iris disc
-    const irisCol = new THREE.Color(irisColorHex);
-    ctx.fillStyle = irisCol.getStyle();
-    ctx.beginPath();
-    ctx.arc(128, 128, 59, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Radial trabecular fibers
-    ctx.strokeStyle = 'rgba(254, 240, 138, 0.28)';
-    ctx.lineWidth = 1.6;
-    for (let a = 0; a < Math.PI * 2; a += 0.09) {
-      ctx.beginPath();
-      ctx.moveTo(128 + Math.cos(a) * 22, 128 + Math.sin(a) * 22);
-      ctx.lineTo(128 + Math.cos(a) * 56, 128 + Math.sin(a) * 56);
-      ctx.stroke();
-    }
-
-    // Deep black pupil
-    ctx.fillStyle = '#020202';
-    ctx.beginPath();
-    ctx.arc(128, 128, 24, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Crisp corneal specular highlight
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-    ctx.beginPath();
-    ctx.arc(116, 114, 6.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    const tex = new THREE.CanvasTexture(canvas);
-    return tex;
-  }
-
-  // 6. GTA V High-Detail Clothing & Denim / Fabric Texture Generator
-  function createGtaFabricTexture(colorHex, type = 'cotton') {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-
-    const col = new THREE.Color(colorHex);
-    ctx.fillStyle = col.getStyle();
-    ctx.fillRect(0, 0, 512, 512);
-
-    if (type === 'denim') {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      ctx.lineWidth = 1.2;
-      for (let i = -512; i < 1024; i += 4) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i + 512, 512);
-        ctx.stroke();
-      }
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.14)';
-      for (let i = -512; i < 1024; i += 8) {
-        ctx.beginPath();
-        ctx.moveTo(i, 512);
-        ctx.lineTo(i + 512, 0);
-        ctx.stroke();
-      }
-      const washGrad = ctx.createLinearGradient(0, 0, 0, 512);
-      washGrad.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
-      washGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.13)');
-      washGrad.addColorStop(0.7, 'rgba(0, 0, 0, 0.08)');
-      washGrad.addColorStop(1, 'rgba(0, 0, 0, 0.16)');
-      ctx.fillStyle = washGrad;
-      ctx.fillRect(0, 0, 512, 512);
-    } else {
-      // Crisp woven cotton / dress shirt with subtle wrinkles
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.07)';
-      for (let x = 0; x < 512; x += 3) {
-        ctx.fillRect(x, 0, 1.2, 512);
-      }
-      for (let y = 0; y < 512; y += 3) {
-        ctx.fillRect(0, y, 512, 1.2);
-      }
-      for (let f = 0; f < 5; f++) {
-        const fy = f * 95 + 30;
-        const foldGrad = ctx.createLinearGradient(0, fy, 0, fy + 32);
-        foldGrad.addColorStop(0, 'rgba(0, 0, 0, 0.10)');
-        foldGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
-        foldGrad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
-        ctx.fillStyle = foldGrad;
-        ctx.fillRect(0, fy, 512, 32);
-      }
-    }
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(type === 'denim' ? 3 : 2, type === 'denim' ? 3 : 2);
-    return tex;
-  }
-
-  // -------------------------------------------------------------------------
-  // 7. Complete AAA GTA V Character Model Builder (Matching Reference Image)
-  // -------------------------------------------------------------------------
-  function createHumanPerson(config) {
-    const { 
-      x, z, rotY, height = 1.74, 
-      skinColor = 0xb87333, 
-      shirtColor = 0xdbeafe, // Default: Crisp office light blue shirt as in reference
-      pantsColor = 0x475569, // Default: Charcoal-grey tailored trousers as in reference
-      hairColor = 0x171717,
-      hasBeard = false,
-      hasStubble = true,
-      hasTie = true,
-      hasBadge = true,
-      hasWatch = true,
-      clothingStyle = 'office_short_sleeve', // 'office_short_sleeve' | 'kurta' | 'traditional' | 'police_uniform' | 'formal_blouse'
-      pose = 'standing' 
+  // Sports_Turf_VR Character Factory
+  function createTurfPerson(config) {
+    const {
+      x = 0, z = 0, rotY = 0,
+      height = 1.76,
+      shirt = 0x1e3a8a,
+      shorts = 0x1e293b,
+      socks = null,
+      shoes = 0x151518,
+      skin = 1,
+      hair = 0,
+      anim = "Idle",
+      speed = 0,
+      path = null,
+      pose = 'standing'
     } = config;
 
-    const person = new THREE.Group();
-    person.position.set(x, 0, z);
-    person.rotation.y = rotY;
-    const scale = height / 1.74;
-    person.scale.set(scale, scale, scale);
-
-    // PBR GTA V Materials
-    const skinTex = createGtaSkinTexture(skinColor);
-    const skinMat = new THREE.MeshStandardMaterial({
-      color: skinColor,
-      map: skinTex,
-      roughness: 0.46,
-      metalness: 0.04
-    });
-
-    // Custom Face UV Map Material (With defined brows, eyes, stubble, lips)
-    const faceTex = createGtaFaceTexture(skinColor, hairColor, hasBeard, hasStubble);
-    const faceMat = new THREE.MeshStandardMaterial({
-      color: skinColor,
-      map: faceTex,
-      roughness: 0.44,
-      metalness: 0.03
-    });
-
-    const isDenim = pantsColor === 0x1e293b || pantsColor === 0x334155;
-    const shirtTex = createGtaFabricTexture(shirtColor, 'cotton');
-    const shirtMat = new THREE.MeshStandardMaterial({
-      color: shirtColor,
-      map: shirtTex,
-      roughness: 0.65,
-      metalness: 0.02
-    });
-
-    const pantsTex = createGtaFabricTexture(pantsColor, isDenim ? 'denim' : 'cotton');
-    const pantsMat = new THREE.MeshStandardMaterial({
-      color: pantsColor,
-      map: pantsTex,
-      roughness: 0.72,
-      metalness: 0.02
-    });
-
-    const leatherShoeMat = new THREE.MeshStandardMaterial({
-      color: 0x151518,
-      roughness: 0.28,
-      metalness: 0.16
-    });
-
-    const hairMat = new THREE.MeshStandardMaterial({
-      color: hairColor,
-      roughness: 0.78,
-      metalness: 0.08
-    });
-
-    const eyeTex = createGtaEyeTexture(0x2d1808);
-    const eyeMat = new THREE.MeshStandardMaterial({
-      map: eyeTex,
-      roughness: 0.06,
-      metalness: 0.08
-    });
-
-    const goldAccentMat = new THREE.MeshStandardMaterial({
-      color: 0xd97706,
-      metalness: 0.85,
-      roughness: 0.22
-    });
-
-    // -------------------------------------------------------------------------
-    // A. GTA V SCULPTED HEAD & ANATOMICAL FACE MESH (Matching Reference Photo)
-    // -------------------------------------------------------------------------
-    const headGroup = new THREE.Group();
-    const headBaseY = pose === 'sitting' ? 1.18 : 1.57;
-    headGroup.position.set(0, headBaseY, 0);
-
-    // 1. Cranium & Skull Vault with Face UV Mapping
-    // In Three.js SphereGeometry, equator UV is centered on the front at +Z when rotated
-    const headSphere = new THREE.Mesh(new THREE.SphereGeometry(0.104, 32, 32), faceMat);
-    headSphere.position.set(0, 0.015, -0.012);
-    headSphere.scale.set(0.92, 1.14, 1.02);
-    headSphere.rotation.y = -Math.PI / 2; // Centers the face UV on the forward (+Z) direction
-    headSphere.castShadow = true;
-    headGroup.add(headSphere);
-
-    // 2. GTA V Sculpted Midface & Cheekbones Structure
-    const cheekbones = new THREE.Mesh(new THREE.BoxGeometry(0.146, 0.068, 0.092), skinMat);
-    cheekbones.position.set(0, 0.014, 0.046);
-    headGroup.add(cheekbones);
-
-    // 3. Defined Square Jawline & Chin
-    const jawGroup = new THREE.Group();
-    jawGroup.position.set(0, -0.052, 0.026);
-    const jawBase = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.042, 0.082, 16), skinMat);
-    jawBase.scale.set(1.22, 1.0, 0.88);
-    jawGroup.add(jawBase);
-
-    const chin = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.038, 0.048), skinMat);
-    chin.position.set(0, -0.032, 0.046);
-    jawGroup.add(chin);
-    headGroup.add(jawGroup);
-
-    // 4. Pronounced Nose Bridge & Tip (Matching the reference's strong masculine nose)
-    const noseBridge = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.048, 0.026), skinMat);
-    noseBridge.position.set(0, 0.016, 0.098);
-    const noseTip = new THREE.Mesh(new THREE.ConeGeometry(0.017, 0.030, 8), skinMat);
-    noseTip.rotation.x = -Math.PI / 2.15;
-    noseTip.position.set(0, -0.008, 0.114);
-
-    const alarLeft = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), skinMat);
-    alarLeft.position.set(-0.014, -0.010, 0.104);
-    const alarRight = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), skinMat);
-    alarRight.position.set(0.014, -0.010, 0.104);
-    headGroup.add(noseBridge, noseTip, alarLeft, alarRight);
-
-    // 5. Defined Natural Lips
-    const upperLip = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.009, 0.018), new THREE.MeshStandardMaterial({ color: 0x9f5145, roughness: 0.42 }));
-    upperLip.position.set(0, -0.034, 0.094);
-    const lowerLip = new THREE.Mesh(new THREE.BoxGeometry(0.040, 0.011, 0.020), new THREE.MeshStandardMaterial({ color: 0xa8584c, roughness: 0.38 }));
-    lowerLip.position.set(0, -0.046, 0.092);
-    headGroup.add(upperLip, lowerLip);
-
-    // 6. Bilateral Eyes with Clear Forward Orientation
-    const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.015, 16, 16), eyeMat);
-    eyeLeft.position.set(-0.036, 0.024, 0.088);
-    eyeLeft.rotation.y = -Math.PI / 2;
-    eyeLeft.scale.set(1.15, 0.95, 1.0);
-
-    const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.015, 16, 16), eyeMat);
-    eyeRight.position.set(0.036, 0.024, 0.088);
-    eyeRight.rotation.y = -Math.PI / 2;
-    eyeRight.scale.set(1.15, 0.95, 1.0);
-    headGroup.add(eyeLeft, eyeRight);
-
-    // 7. Upper Brow Ridges
-    [-0.036, 0.036].forEach((ex, idx) => {
-      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.040, 0.009, 0.018), hairMat);
-      brow.position.set(ex, 0.045, 0.094);
-      brow.rotation.z = idx === 0 ? 0.06 : -0.06;
-      headGroup.add(brow);
-
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.017, 0.0035, 8, 16, Math.PI), skinMat);
-      rim.rotation.x = -0.22;
-      rim.position.set(ex, 0.024, 0.086);
-      headGroup.add(rim);
-    });
-
-    // 8. Sculpted Ears with Helix & Lobe
-    [-0.092, 0.092].forEach(ex => {
-      const earGroup = new THREE.Group();
-      earGroup.position.set(ex, 0.012, -0.008);
-      earGroup.rotation.y = ex > 0 ? 0.22 : -0.22;
-
-      const earBase = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.046, 0.028), skinMat);
-      const earHelix = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.004, 8, 12, Math.PI), skinMat);
-      earHelix.position.set(ex > 0 ? 0.004 : -0.004, 0.006, 0);
-      earGroup.add(earBase, earHelix);
-      headGroup.add(earGroup);
-    });
-
-    // 9. GTA V Buzz-Cut / Tight Short Crop (Matching reference haircut)
-    const hairCrop = new THREE.Mesh(
-      new THREE.SphereGeometry(0.106, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.52),
-      hairMat
-    );
-    hairCrop.position.set(0, 0.032, -0.022);
-    hairCrop.scale.set(0.96, 1.05, 1.02);
-    headGroup.add(hairCrop);
-
-    if (hasBeard) {
-      const beard = new THREE.Mesh(new THREE.BoxGeometry(0.088, 0.065, 0.054), hairMat);
-      beard.position.set(0, -0.056, 0.048);
-      headGroup.add(beard);
+    if (!gltfPlayerBase) {
+      console.warn("gltfPlayerBase not ready, cannot instantiate character.");
+      return null;
     }
 
-    person.add(headGroup);
+    // Clone the skeletal hierarchy properly
+    const charRoot = gltfPlayerBase.clone(true);
 
-    // -------------------------------------------------------------------------
-    // B. NECK WITH COLLAR & SPREAD LAPELS
-    // -------------------------------------------------------------------------
-    const neckY = pose === 'sitting' ? 1.05 : 1.45;
-    const neckGroup = new THREE.Group();
-    neckGroup.position.set(0, neckY, 0.005);
+    // Accurate human scale calibration
+    const nativeH = gltfPlayerBase.userData.nativeHeight || 1.76;
+    const targetScale = height / nativeH;
+    charRoot.scale.setScalar(targetScale);
+    charRoot.position.set(x, 0, z);
+    charRoot.rotation.y = rotY;
 
-    const neckBase = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.065, 0.11, 16), skinMat);
-    neckBase.castShadow = true;
-    neckGroup.add(neckBase);
+    const skinRGB = TURF_SKIN_PALETTE[skin % TURF_SKIN_PALETTE.length];
+    const hairColorHex = TURF_HAIR_PALETTE[hair % TURF_HAIR_PALETTE.length];
+    const socksColor = socks !== null ? socks : shirt;
 
-    // Adam's apple cartilage
-    const adamsApple = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.024, 8), skinMat);
-    adamsApple.rotation.x = -Math.PI / 2.1;
-    adamsApple.position.set(0, 0.006, 0.056);
-    neckGroup.add(adamsApple);
-    person.add(neckGroup);
+    // Apply PBR Materials & Custom Wardrobe to Rigged Sub-Meshes
+    charRoot.traverse(child => {
+      if (!child.isMesh) return;
+      child.castShadow = true;
+      child.receiveShadow = true;
+      child.frustumCulled = false;
 
-    // -------------------------------------------------------------------------
-    // C. BODY, SHORT-SLEEVE SHIRT, TIE, BADGE & BELT (Matching Reference)
-    // -------------------------------------------------------------------------
-    if (pose === 'sitting') {
-      const hipY = 0.48;
+      const mat = child.material.clone();
+      const name = child.name || '';
 
-      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.182, 0.158, 0.52, 20), shirtMat);
-      torso.position.set(0, hipY + 0.32, 0.0);
-      torso.castShadow = true;
-      person.add(torso);
-
-      const collar = new THREE.Mesh(new THREE.TorusGeometry(0.074, 0.016, 12, 20), shirtMat);
-      collar.rotation.x = Math.PI / 2;
-      collar.position.set(0, hipY + 0.56, 0.01);
-      person.add(collar);
-
-      [-0.105, 0.105].forEach(lx => {
-        const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.074, 0.44, 16), pantsMat);
-        thigh.rotation.x = Math.PI / 2;
-        thigh.position.set(lx, hipY + 0.06, 0.22);
-        thigh.castShadow = true;
-
-        const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.070, 0.056, 0.46, 16), pantsMat);
-        shin.position.set(lx, 0.24, 0.44);
-        shin.castShadow = true;
-
-        const shoeGroup = new THREE.Group();
-        shoeGroup.position.set(lx, 0.038, 0.49);
-        const shoeBody = new THREE.Mesh(new THREE.BoxGeometry(0.096, 0.072, 0.23), leatherShoeMat);
-        shoeBody.castShadow = true;
-        const shoeSole = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.016, 0.24), new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.85 }));
-        shoeSole.position.y = -0.032;
-        shoeGroup.add(shoeBody, shoeSole);
-
-        person.add(thigh, shin, shoeGroup);
-      });
-
-      [-0.19, 0.19].forEach((ax, idx) => {
-        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.044, 0.42, 14), shirtMat);
-        arm.rotation.x = -0.68;
-        arm.rotation.z = idx === 0 ? -0.22 : 0.22;
-        arm.position.set(ax * 0.9, hipY + 0.28, 0.15);
-        person.add(arm);
-      });
-
-      const phone = new THREE.Mesh(new THREE.BoxGeometry(0.082, 0.012, 0.155), new THREE.MeshPhysicalMaterial({ color: 0x0284c7, metalness: 0.85, roughness: 0.18 }));
-      phone.position.set(0, hipY + 0.155, 0.32);
-      person.add(phone);
-
-      person.userData = { 
-        pose, 
-        headGroup, 
-        eyeLeft, 
-        eyeRight, 
-        phase: Math.random() * Math.PI * 2,
-        blinkTimer: Math.random() * 3 + 2,
-        isBlinking: false
-      };
-      return person;
-    }
-
-    // STANDING / WALKING / INTERACTING CHARACTER
-    const torsoGroup = new THREE.Group();
-    torsoGroup.position.set(0, 1.16, 0);
-
-    // Torso: Athletic V-Taper Office Button-Up Shirt
-    const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.192, 0.156, 0.34, 24), shirtMat);
-    chest.position.set(0, 0.14, 0);
-    chest.castShadow = true;
-    chest.receiveShadow = true;
-
-    const abdomen = new THREE.Mesh(new THREE.CylinderGeometry(0.156, 0.148, 0.28, 20), shirtMat);
-    abdomen.position.set(0, -0.15, 0);
-    abdomen.castShadow = true;
-    torsoGroup.add(chest, abdomen);
-
-    // Pointed Spread Collar (Reference office shirt collar)
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.076, 0.016, 12, 24), shirtMat);
-    collar.rotation.x = Math.PI / 2;
-    collar.position.set(0, 0.29, 0.01);
-    torsoGroup.add(collar);
-
-    const leftCollarTab = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.065, 0.012), shirtMat);
-    leftCollarTab.rotation.set(-0.25, 0.35, -0.45);
-    leftCollarTab.position.set(-0.045, 0.26, 0.08);
-    const rightCollarTab = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.065, 0.012), shirtMat);
-    rightCollarTab.rotation.set(-0.25, -0.35, 0.45);
-    rightCollarTab.position.set(0.045, 0.26, 0.08);
-    torsoGroup.add(leftCollarTab, rightCollarTab);
-
-    // Vertical Button Placket
-    const placket = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.48, 0.012), shirtMat);
-    placket.position.set(0, 0.02, 0.165);
-    torsoGroup.add(placket);
-
-    // Small Pearl Buttons on Placket
-    [-0.10, 0.0, 0.10, 0.20].forEach(by => {
-      const button = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.006, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
-      button.rotation.x = Math.PI / 2;
-      button.position.set(0, by, 0.173);
-      torsoGroup.add(button);
+      if (/Shirt/i.test(name)) {
+        mat.map = null;
+        mat.color.set(shirt);
+        mat.roughness = 0.65;
+        mat.metalness = 0.02;
+      } else if (/Shorts|Pants/i.test(name)) {
+        mat.map = null;
+        mat.color.set(shorts);
+        mat.roughness = 0.72;
+        mat.metalness = 0.02;
+      } else if (/Socks/i.test(name)) {
+        mat.map = null;
+        mat.color.set(socksColor);
+        mat.roughness = 0.75;
+      } else if (/Shoes/i.test(name)) {
+        mat.map = null;
+        mat.color.set(shoes);
+        mat.roughness = 0.35;
+        mat.metalness = 0.12;
+      } else if (/Body/i.test(name)) {
+        // High fidelity human face & body skin from Sports_Turf_VR
+        mat.color.setRGB(skinRGB[0], skinRGB[1], skinRGB[2]);
+        mat.roughness = 0.48;
+        mat.metalness = 0.04;
+      } else if (/Hair/i.test(name)) {
+        mat.color.set(hairColorHex);
+        mat.roughness = 0.75;
+      } else if (/Eyelashes/i.test(name)) {
+        mat.color.set(0x0a0a0c);
+      }
+      child.material = mat;
     });
 
-    // Left Chest Pocket (Direct from Reference)
-    const chestPocket = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.074, 0.010), shirtMat);
-    chestPocket.position.set(0.088, 0.14, 0.168);
-    torsoGroup.add(chestPocket);
+    // Rigged Animation Mixer & Controller
+    const mixer = new THREE.AnimationMixer(charRoot);
+    characterMixers.push(mixer);
 
-    // Laminated Security ID Badge with Clip (Clipped to chest pocket as in reference)
-    if (hasBadge) {
-      const badgeGroup = new THREE.Group();
-      badgeGroup.position.set(0.088, 0.14, 0.178);
-
-      const clipMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.012, 0.018, 0.008),
-        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.15 })
-      );
-      clipMesh.position.set(0, 0.038, 0);
-
-      const idBadgeTex = createGtaIdBadgeTexture();
-      const badgeCard = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.048, 0.068),
-        new THREE.MeshBasicMaterial({ map: idBadgeTex, side: THREE.DoubleSide })
-      );
-      badgeCard.position.set(0, -0.005, 0.002);
-      badgeGroup.add(clipMesh, badgeCard);
-      torsoGroup.add(badgeGroup);
+    const actions = {};
+    for (let animName in playerAnimations) {
+      actions[animName] = mixer.clipAction(playerAnimations[animName]);
     }
 
-    // Striped Office Necktie (Direct from Reference)
-    if (hasTie) {
-      const tieGroup = new THREE.Group();
-      tieGroup.position.set(0, 0.25, 0.155);
-
-      const tieTex = createGtaTieTexture();
-      const tieMat = new THREE.MeshStandardMaterial({
-        map: tieTex,
-        roughness: 0.55,
-        metalness: 0.05
-      });
-
-      // Windsor knot (triangular taper at top)
-      const tieKnot = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.042, 4), tieMat);
-      tieKnot.rotation.y = Math.PI / 4;
-      tieKnot.rotation.x = Math.PI;
-      tieKnot.position.set(0, 0.015, 0.012);
-
-      // Hanging tie blade draped down to belt
-      const tieBlade = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.42, 0.012), tieMat);
-      tieBlade.position.set(0, -0.20, 0.015);
-
-      // Pointed tie tip
-      const tieTip = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.045, 4), tieMat);
-      tieTip.rotation.y = Math.PI / 4;
-      tieTip.rotation.x = Math.PI;
-      tieTip.position.set(0, -0.42, 0.015);
-
-      tieGroup.add(tieKnot, tieBlade, tieTip);
-      torsoGroup.add(tieGroup);
-    }
-
-    // Black Leather Belt with Silver Buckle (Direct from reference)
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.152, 0.152, 0.045, 24), new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.35 }));
-    belt.position.set(0, -0.27, 0);
-    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.042, 0.014), new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.9, roughness: 0.2 }));
-    buckle.position.set(0, -0.27, 0.155);
-    torsoGroup.add(belt, buckle);
-
-    if (clothingStyle === 'kurta') {
-      const kurtaSkirt = new THREE.Mesh(new THREE.CylinderGeometry(0.152, 0.178, 0.44, 20), shirtMat);
-      kurtaSkirt.position.set(0, -0.42, 0);
-      kurtaSkirt.castShadow = true;
-      torsoGroup.add(kurtaSkirt);
-    }
-
-    person.add(torsoGroup);
-
-    // -------------------------------------------------------------------------
-    // D. HIGH-WAISTED PLEATED TROUSERS & LEATHER DRESS SHOES (Reference)
-    // -------------------------------------------------------------------------
-    const legs = [];
-    const lowerLegs = [];
-    [-0.105, 0.105].forEach((lx) => {
-      const hipJoint = new THREE.Group();
-      hipJoint.position.set(lx, 0.88, 0);
-
-      // Thigh with pressed crease
-      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.090, 0.072, 0.44, 18), pantsMat);
-      thigh.position.set(0, -0.22, 0);
-      thigh.castShadow = true;
-      thigh.receiveShadow = true;
-      hipJoint.add(thigh);
-
-      // Knee joint
-      const kneeGroup = new THREE.Group();
-      kneeGroup.position.set(0, -0.44, 0);
-
-      const patella = new THREE.Mesh(new THREE.SphereGeometry(0.068, 14, 14), pantsMat);
-      kneeGroup.add(patella);
-
-      // Shin & trouser hem break over shoes
-      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.056, 0.44, 16), pantsMat);
-      shin.position.set(0, -0.22, 0);
-      shin.castShadow = true;
-      shin.receiveShadow = true;
-      kneeGroup.add(shin);
-
-      // Classic Black Dress Shoe with Stacked Heel (Direct from reference)
-      const shoeGroup = new THREE.Group();
-      shoeGroup.position.set(0, -0.42, 0.045);
-
-      const shoeBody = new THREE.Mesh(new THREE.BoxGeometry(0.098, 0.072, 0.24), leatherShoeMat);
-      shoeBody.castShadow = true;
-      const shoeHeel = new THREE.Mesh(new THREE.BoxGeometry(0.096, 0.028, 0.08), new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.9 }));
-      shoeHeel.position.set(0, -0.040, -0.075);
-      const shoeSole = new THREE.Mesh(new THREE.BoxGeometry(0.102, 0.016, 0.25), new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.9 }));
-      shoeSole.position.y = -0.038;
-      shoeGroup.add(shoeBody, shoeHeel, shoeSole);
-
-      kneeGroup.add(shoeGroup);
-      hipJoint.add(kneeGroup);
-      person.add(hipJoint);
-
-      legs.push(hipJoint);
-      lowerLegs.push(kneeGroup);
-    });
-
-    // -------------------------------------------------------------------------
-    // E. SHORT-SLEEVE SHIRT ARMS & LEATHER WRISTWATCH (Reference Image)
-    // -------------------------------------------------------------------------
-    // Left Arm (Short-sleeve cuff, exposed forearm, brown leather wristwatch)
-    const leftArmGroup = new THREE.Group();
-    leftArmGroup.position.set(-0.23, 1.40, 0);
-
-    const leftDeltoid = new THREE.Mesh(new THREE.SphereGeometry(0.068, 14, 14), shirtMat);
-    leftArmGroup.add(leftDeltoid);
-
-    // Short-sleeve upper arm sleeve with stitched cuff
-    const leftSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.052, 0.18, 16), shirtMat);
-    leftSleeve.position.set(0, -0.09, 0);
-    leftSleeve.castShadow = true;
-    leftArmGroup.add(leftSleeve);
-
-    const leftSleeveCuff = new THREE.Mesh(new THREE.TorusGeometry(0.053, 0.008, 8, 16), shirtMat);
-    leftSleeveCuff.rotation.x = Math.PI / 2;
-    leftSleeveCuff.position.set(0, -0.18, 0);
-    leftArmGroup.add(leftSleeveCuff);
-
-    // Exposed natural forearm with muscular contour (Direct from reference)
-    const leftForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.038, 0.38, 14), skinMat);
-    leftForearm.position.set(0.018, -0.34, 0.02);
-    leftForearm.rotation.z = 0.06;
-    leftForearm.castShadow = true;
-    leftArmGroup.add(leftForearm);
-
-    // Brown Leather Wristwatch with Gold Bezel on Left Wrist (Reference Image Detail)
-    if (hasWatch) {
-      const watchGroup = new THREE.Group();
-      watchGroup.position.set(0.026, -0.49, 0.022);
-
-      // Brown leather strap
-      const watchStrap = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.042, 0.042, 0.024, 16),
-        new THREE.MeshStandardMaterial({ color: 0x5c2c16, roughness: 0.45 })
-      );
-      // Gold watch dial case
-      const watchCase = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.008, 12), goldAccentMat);
-      watchCase.rotation.z = Math.PI / 2;
-      watchCase.position.set(-0.040, 0, 0);
-      // White dial face
-      const watchFace = new THREE.Mesh(new THREE.CircleGeometry(0.012, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-      watchFace.rotation.y = -Math.PI / 2;
-      watchFace.position.set(-0.045, 0, 0);
-
-      watchGroup.add(watchStrap, watchCase, watchFace);
-      leftArmGroup.add(watchGroup);
-    }
-
-    // Anatomical Left Hand
-    const leftHandGroup = new THREE.Group();
-    leftHandGroup.position.set(0.032, -0.56, 0.030);
-    const leftPalm = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.072, 0.062), skinMat);
-    const leftThumb = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.007, 0.045, 8), skinMat);
-    leftThumb.rotation.z = -0.55;
-    leftThumb.position.set(-0.022, 0.015, 0.022);
-    leftHandGroup.add(leftPalm, leftThumb);
-    leftArmGroup.add(leftHandGroup);
-    person.add(leftArmGroup);
-
-    // Right Arm (Interactive Touch Gesture OR Natural Relaxed Posture)
-    const rightArmGroup = new THREE.Group();
-    rightArmGroup.position.set(0.23, 1.40, 0);
-
-    const rightDeltoid = new THREE.Mesh(new THREE.SphereGeometry(0.068, 14, 14), shirtMat);
-    rightArmGroup.add(rightDeltoid);
-
-    // Short sleeve on right arm
-    const rightSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.052, 0.18, 16), shirtMat);
-    rightSleeve.position.set(0, -0.09, 0);
-    rightSleeve.castShadow = true;
-    rightArmGroup.add(rightSleeve);
-
-    const rightSleeveCuff = new THREE.Mesh(new THREE.TorusGeometry(0.053, 0.008, 8, 16), shirtMat);
-    rightSleeveCuff.rotation.x = Math.PI / 2;
-    rightSleeveCuff.position.set(0, -0.18, 0);
-    rightArmGroup.add(rightSleeveCuff);
-
-    if (pose === 'touching') {
-      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.038, 0.38, 14), skinMat);
-      forearm.rotation.x = -1.26;
-      forearm.position.set(-0.03, -0.21, 0.28);
-      forearm.castShadow = true;
-      rightArmGroup.add(forearm);
-
-      const handGroup = new THREE.Group();
-      handGroup.position.set(-0.045, -0.18, 0.45);
-      const palm = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.062, 0.075), skinMat);
-      const indexFinger = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.006, 0.065, 8), skinMat);
-      indexFinger.rotation.x = -Math.PI / 2.2;
-      indexFinger.position.set(0, 0.016, 0.055);
-      const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.0065, 0.042, 8), skinMat);
-      thumb.rotation.y = -0.45;
-      thumb.position.set(0.022, -0.012, 0.024);
-
-      handGroup.add(palm, indexFinger, thumb);
-      rightArmGroup.add(handGroup);
-    } else {
-      const rightForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.038, 0.38, 14), skinMat);
-      rightForearm.position.set(-0.018, -0.34, 0.02);
-      rightForearm.rotation.z = -0.06;
-      rightForearm.castShadow = true;
-      rightArmGroup.add(rightForearm);
-
-      const rightHandGroup = new THREE.Group();
-      rightHandGroup.position.set(-0.032, -0.56, 0.030);
-      const rightPalm = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.072, 0.062), skinMat);
-      const rightThumb = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.007, 0.045, 8), skinMat);
-      rightThumb.rotation.z = 0.55;
-      rightThumb.position.set(0.022, 0.015, 0.022);
-      rightHandGroup.add(rightPalm, rightThumb);
-      rightArmGroup.add(rightHandGroup);
-    }
-    person.add(rightArmGroup);
-
-    person.userData = { 
-      rightArmGroup, 
-      leftArmGroup,
-      headGroup,
-      eyeLeft,
-      eyeRight,
-      arms: [leftArmGroup, rightArmGroup],
-      legs: legs,
-      lowerLegs: lowerLegs,
-      pose, 
-      speed: config.speed || 0.8,
-      path: config.path || null,
+    const charController = {
+      root: charRoot,
+      mixer: mixer,
+      actions: actions,
+      currentAction: null,
+      pose: pose,
+      speed: speed,
+      path: path,
       targetIndex: 0,
-      phase: Math.random() * Math.PI * 2,
-      blinkTimer: Math.random() * 3 + 2,
-      isBlinking: false
+      play(name, fadeTime = 0.3, timeScale = 1.0) {
+        const act = actions[name];
+        if (!act) return;
+        act.timeScale = timeScale;
+        if (this.currentAction !== act) {
+          act.reset().fadeIn(fadeTime).play();
+          if (this.currentAction) {
+            this.currentAction.fadeOut(fadeTime);
+          }
+          this.currentAction = act;
+        }
+      }
     };
-    return person;
+
+    // Start with requested motion
+    const startClip = (anim && actions[anim]) ? anim : "Idle";
+    charController.play(startClip, 0);
+    // Stagger phase so citizens are not synchronized
+    mixer.update(Math.random() * 2.5);
+
+    charRoot.userData = charController;
+    return charController;
   }
 
-  // -------------------------------------------------------------------------
-  // 8. Character Ensemble Population (Preserving Locations & Person Count)
-  // -------------------------------------------------------------------------
-  function buildHumanCharacters() {
-    // 4 Kiosks: X = [-4.6, -1.6, 1.6, 4.6] at Z = -0.6
-    // Pod 02 (x = -1.6) is left open and empty for the player
+  // Populate the 7 Human Citizens with Sports_Turf_VR High-Definition Character Models
+  async function buildHumanCharacters() {
+    await loadTurfCharacterModel();
 
-    // Kiosk 1 Occupant: Demographics Citizen matching GTA V office style
-    const user1 = createHumanPerson({
-      x: -4.6,
-      z: 0.16,
-      rotY: Math.PI,
+    if (!gltfPlayerBase) {
+      console.warn("Character base not loaded, skipping citizen population.");
+      return;
+    }
+
+    // Citizen 1: Kiosk 1 Occupant updating demographics
+    const user1 = createTurfPerson({
+      x: -4.6, z: 0.16, rotY: Math.PI,
       height: 1.76,
-      skinColor: 0xaa6e40,
-      shirtColor: 0xdbeafe, // Pale blue office shirt from reference
-      pantsColor: 0x475569, // Charcoal grey trousers from reference
-      hairColor: 0x0a0a0c,
-      hasTie: true,
-      hasBadge: true,
-      hasWatch: true,
-      hasBeard: true,
-      hasStubble: true,
-      pose: 'touching',
-      speed: 0
+      shirt: 0x0369a1, // Ocean blue button-up
+      shorts: 0x1e293b, // Indigo denim trousers
+      socks: 0x1e293b,
+      shoes: 0x151518,
+      skin: 1, // Medium warm golden tone
+      hair: 2, // Jet black
+      anim: "Idle",
+      pose: 'touching'
     });
-    scene.add(user1);
-    humanCharacters.push(user1);
+    if (user1) {
+      scene.add(user1.root);
+      humanCharacters.push(user1);
+    }
 
-    // Kiosk 3 Occupant: Citizen in traditional tailored Emerald Kurta with watch
-    const user3 = createHumanPerson({
-      x: 1.6,
-      z: 0.18,
-      rotY: Math.PI,
+    // Citizen 2: Kiosk 3 Occupant performing biometric verification
+    const user3 = createTurfPerson({
+      x: 1.6, z: 0.18, rotY: Math.PI,
+      height: 1.70,
+      shirt: 0x047857, // Emerald green
+      shorts: 0xf8fafc, // Crisp off-white trousers
+      socks: 0xf8fafc,
+      shoes: 0x334155,
+      skin: 0, // Warm light tan
+      hair: 0,
+      anim: "Idle",
+      pose: 'touching'
+    });
+    if (user3) {
+      scene.add(user3.root);
+      humanCharacters.push(user3);
+    }
+
+    // Citizen 3: Kiosk 4 Occupant senior citizen
+    const user4 = createTurfPerson({
+      x: 4.6, z: 0.17, rotY: Math.PI,
       height: 1.72,
-      skinColor: 0xca8a52,
-      shirtColor: 0x047857, // Emerald green woven kurta
-      pantsColor: 0xf8fafc, // Crisp off-white pajama
-      hairColor: 0x18181b,
-      clothingStyle: 'kurta',
-      hasTie: false,
-      hasBadge: false,
-      hasWatch: true,
-      hasBeard: false,
-      hasStubble: true,
-      pose: 'touching',
-      speed: 0
+      shirt: 0xb45309, // Saffron amber shirt
+      shorts: 0x334155, // Charcoal trousers
+      socks: 0x334155,
+      shoes: 0x18181b,
+      skin: 4, // Deep melanin rich
+      hair: 4, // Salt-and-pepper silver
+      anim: "Idle",
+      pose: 'touching'
     });
-    scene.add(user3);
-    humanCharacters.push(user3);
+    if (user4) {
+      scene.add(user4.root);
+      humanCharacters.push(user4);
+    }
 
-    // Kiosk 4 Occupant: Distinguished senior citizen with tie and salt-and-pepper hair
-    const user4 = createHumanPerson({
-      x: 4.6,
-      z: 0.17,
-      rotY: Math.PI,
-      height: 1.74,
-      skinColor: 0x935c34,
-      shirtColor: 0xfef3c7, // Warm cream/amber shirt
-      pantsColor: 0x334155, // Slate grey trousers
-      hairColor: 0x71717a, // Salt-and-pepper hair
-      hasTie: true,
-      hasBadge: false,
-      hasWatch: true,
-      hasBeard: true,
-      hasStubble: true,
-      pose: 'touching',
-      speed: 0
-    });
-    scene.add(user4);
-    humanCharacters.push(user4);
-
-    // Waiting Bench Citizen checking mobile phone
-    const waiter = createHumanPerson({
-      x: -5.2,
-      z: 2.5,
-      rotY: Math.PI / 2,
+    // Citizen 4: Waiting Bench Citizen
+    const waiter = createTurfPerson({
+      x: -5.2, z: 2.5, rotY: Math.PI / 2,
       height: 1.76,
-      skinColor: 0x9e6138,
-      shirtColor: 0x64748b, // Slate shirt
-      pantsColor: 0x0f172a, // Black trousers
-      hairColor: 0x09090b,
-      hasTie: false,
-      hasBadge: false,
-      hasWatch: true,
-      hasStubble: true,
-      pose: 'sitting',
-      speed: 0
+      shirt: 0x475569, // Slate grey
+      shorts: 0x0f172a, // Black jeans
+      socks: 0x0f172a,
+      shoes: 0x1e293b,
+      skin: 2, // Warm brown
+      hair: 0,
+      anim: "Keeper Idle", // Seated/relaxed crouch pose
+      pose: 'sitting'
     });
-    scene.add(waiter);
-    humanCharacters.push(waiter);
+    if (waiter) {
+      scene.add(waiter.root);
+      humanCharacters.push(waiter);
+    }
 
-    // UIDAI Vestibule Officer: Exact GTA V Character Appearance from Reference
-    const assistant = createHumanPerson({
-      x: 5.5,
-      z: 2.4,
-      rotY: -Math.PI * 0.72,
+    // Citizen 5: UIDAI Vestibule Officer in Navy Uniform
+    const assistant = createTurfPerson({
+      x: 5.5, z: 2.4, rotY: -Math.PI * 0.72,
       height: 1.80,
-      skinColor: 0xad7247, // Exact warm tanned complexion from reference
-      shirtColor: 0xdbeafe, // Crisp pale sky blue short-sleeve shirt
-      pantsColor: 0x475569, // Charcoal pleated trousers
-      hairColor: 0x171717, // Buzz cut dark hair
-      hasTie: true,        // Striped grey/navy necktie
-      hasBadge: true,      // Laminated ID badge on chest pocket
-      hasWatch: true,      // Brown leather wristwatch with gold bezel
-      hasBeard: false,
-      hasStubble: true,    // 5 o'clock shadow
-      pose: 'standing',
-      speed: 0
+      shirt: 0x1e3a8a, // Official duty deep navy
+      shorts: 0x0f172a, // Black uniform trousers
+      socks: 0x0f172a,
+      shoes: 0x111827,
+      skin: 1, // Warm tan
+      hair: 1,
+      anim: "Idle",
+      pose: 'standing'
     });
-    scene.add(assistant);
-    humanCharacters.push(assistant);
+    if (assistant) {
+      scene.add(assistant.root);
+      humanCharacters.push(assistant);
+    }
 
-    // Dynamic Walking Citizen 1: Walking across vestibule from entrance to queue
-    const walker1 = createHumanPerson({
-      x: -2.0,
-      z: 4.8,
-      rotY: 0,
+    // Citizen 6: Dynamic Walking Citizen 1 from entrance to queue
+    const walker1 = createTurfPerson({
+      x: -2.0, z: 4.8, rotY: 0,
       height: 1.74,
-      skinColor: 0xb47849,
-      shirtColor: 0x6b21a8, // Textured deep purple top
-      pantsColor: 0x1e293b, // Indigo trousers
-      hairColor: 0x09090b,
-      hasTie: false,
-      hasBadge: false,
-      hasWatch: true,
-      hasStubble: true,
+      shirt: 0x6b21a8, // Textured deep purple top
+      shorts: 0x1e293b, // Indigo trousers
+      socks: 0x1e293b,
+      shoes: 0x18181b,
+      skin: 3, // Fair tone
+      hair: 2,
+      anim: "Walking",
       pose: 'walking',
       speed: 0.85,
       path: [
@@ -2315,23 +1497,22 @@
         { x: -0.5, z: 4.8 }
       ]
     });
-    scene.add(walker1);
-    humanCharacters.push(walker1);
+    if (walker1) {
+      scene.add(walker1.root);
+      humanCharacters.push(walker1);
+    }
 
-    // Dynamic Walking Citizen 2: Walking after service completion toward the glass doors
-    const walker2 = createHumanPerson({
-      x: 3.2,
-      z: 1.6,
-      rotY: 0,
+    // Citizen 7: Dynamic Walking Citizen 2 toward glass exit doors
+    const walker2 = createTurfPerson({
+      x: 3.2, z: 1.6, rotY: 0,
       height: 1.68,
-      skinColor: 0xc2844e,
-      shirtColor: 0xbe123c, // Rose madder formal blouse
-      pantsColor: 0x0f172a, // Black trousers
-      hairColor: 0x18181b,
-      hasTie: false,
-      hasBadge: false,
-      hasWatch: false,
-      hasStubble: false,
+      shirt: 0xbe123c, // Rose madder formal top
+      shorts: 0x0f172a, // Black trousers
+      socks: 0x0f172a,
+      shoes: 0x111827,
+      skin: 1,
+      hair: 0,
+      anim: "Walking",
       pose: 'walking',
       speed: 0.75,
       path: [
@@ -2341,159 +1522,62 @@
         { x: 2.2, z: 3.2 }
       ]
     });
-    scene.add(walker2);
-    humanCharacters.push(walker2);
+    if (walker2) {
+      scene.add(walker2.root);
+      humanCharacters.push(walker2);
+    }
   }
 
-  // -------------------------------------------------------------------------
-  // 9. GTA V Kinematic Animation Engine (Pelvic Drop, Dual-Limb Gait, Saccades & Idle Weight Shift)
-  // -------------------------------------------------------------------------
+  // Skeletal Motion & Bipedal Path Updates
   function updateHumanAnimations(elapsed, delta = 0.016) {
-    humanCharacters.forEach(person => {
-      const ud = person.userData;
-      if (!ud) return;
+    // 1. Advance Skeletal Rig Mixers
+    for (let i = 0; i < characterMixers.length; i++) {
+      characterMixers[i].update(delta);
+    }
 
-      // 1. Natural Saccadic Eye Micro-Movements & Blinking
-      ud.blinkTimer -= delta;
-      if (ud.blinkTimer <= 0) {
-        ud.isBlinking = true;
-        if (ud.eyeLeft && ud.eyeRight) {
-          ud.eyeLeft.scale.y = 0.12;
-          ud.eyeRight.scale.y = 0.12;
-        }
-        if (ud.blinkTimer <= -0.12) {
-          ud.isBlinking = false;
-          if (ud.eyeLeft && ud.eyeRight) {
-            ud.eyeLeft.scale.y = 1.0;
-            ud.eyeRight.scale.y = 1.0;
-          }
-          ud.blinkTimer = Math.random() * 3.5 + 2.0;
-        }
-      }
+    // 2. Waypoint Following for Walking Citizens
+    humanCharacters.forEach(ctrl => {
+      if (!ctrl || !ctrl.root) return;
+      const root = ctrl.root;
 
-      // 2. Head Gaze & Subconscious Awareness Sway
-      if (ud.headGroup && ud.pose !== 'sitting') {
-        ud.headGroup.rotation.y = Math.sin(elapsed * 0.42 + ud.phase) * 0.055;
-        ud.headGroup.rotation.x = Math.sin(elapsed * 0.28 + ud.phase) * 0.030;
-      }
-
-      // 3. Realistic Diaphragm Breathing
-      const breath = Math.sin(elapsed * 1.35 + ud.phase) * 0.0038;
-      person.position.y = breath;
-
-      // 4. Kiosk User: Interactive Finger Tapping & Micro Weight Shifts
-      if (ud.pose === 'touching' && ud.rightArmGroup) {
-        const tapCycle = Math.sin(elapsed * 1.55 + ud.phase);
-        ud.rightArmGroup.rotation.x = -0.58 + Math.max(0, tapCycle) * 0.15;
-        ud.rightArmGroup.rotation.y = Math.sin(elapsed * 0.75 + ud.phase) * 0.035;
-      }
-
-      // 5. Standing Guard / Security Officer Idle Weight Shift
-      if (ud.pose === 'standing') {
-        person.rotation.z = Math.sin(elapsed * 0.35 + ud.phase) * 0.018;
-        if (ud.arms && ud.arms[0] && ud.arms[1]) {
-          ud.arms[0].rotation.z = 0.06 + Math.sin(elapsed * 0.4 + ud.phase) * 0.02;
-          ud.arms[1].rotation.z = -0.06 - Math.sin(elapsed * 0.4 + ud.phase) * 0.02;
-        }
-      }
-
-      // 6. Sitting Citizen Phone Browsing
-      if (ud.pose === 'sitting') {
-        person.rotation.y = (Math.PI / 2) + Math.sin(elapsed * 0.65 + ud.phase) * 0.035;
-        if (ud.headGroup) {
-          ud.headGroup.rotation.x = 0.24 + Math.sin(elapsed * 0.48) * 0.025;
-          ud.headGroup.rotation.y = Math.sin(elapsed * 0.35) * 0.04;
-        }
-      }
-
-      // 7. Bipedal Gait Engine with Kinematic Knee Flexion & Counter-Swing
-      if (ud.pose === 'walking' && ud.path && ud.path.length > 0) {
-        if (ud.targetIndex === undefined) ud.targetIndex = 0;
-        const target = ud.path[ud.targetIndex];
-        const dx = target.x - person.position.x;
-        const dz = target.z - person.position.z;
+      if (ctrl.pose === 'walking' && ctrl.path && ctrl.path.length > 0) {
+        if (ctrl.targetIndex === undefined) ctrl.targetIndex = 0;
+        const target = ctrl.path[ctrl.targetIndex];
+        const dx = target.x - root.position.x;
+        const dz = target.z - root.position.z;
         const dist = Math.hypot(dx, dz);
 
         if (dist < 0.28) {
-          ud.targetIndex = (ud.targetIndex + 1) % ud.path.length;
+          ctrl.targetIndex = (ctrl.targetIndex + 1) % ctrl.path.length;
         } else {
-          const moveSpeed = ud.speed || 0.8;
+          const moveSpeed = ctrl.speed || 0.8;
           const stepDist = delta * moveSpeed;
-          person.position.x += (dx / dist) * stepDist;
-          person.position.z += (dz / dist) * stepDist;
+          root.position.x += (dx / dist) * stepDist;
+          root.position.z += (dz / dist) * stepDist;
 
           const targetAngle = Math.atan2(dx, dz);
-          let angleDiff = targetAngle - person.rotation.y;
+          let angleDiff = targetAngle - root.rotation.y;
           while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
           while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-          person.rotation.y += angleDiff * 0.12;
+          root.rotation.y += angleDiff * 0.12;
 
-          const gaitFreq = elapsed * 5.6 * moveSpeed;
-          const strideL = Math.sin(gaitFreq);
-          const strideR = Math.sin(gaitFreq + Math.PI);
-
-          person.position.y = Math.abs(Math.sin(gaitFreq)) * 0.024;
-
-          if (ud.legs && ud.legs.length === 2) {
-            ud.legs[0].rotation.x = strideL * 0.52;
-            ud.legs[1].rotation.x = strideR * 0.52;
-          }
-
-          if (ud.lowerLegs && ud.lowerLegs.length === 2) {
-            ud.lowerLegs[0].rotation.x = Math.max(0, -strideL) * 0.55;
-            ud.lowerLegs[1].rotation.x = Math.max(0, -strideR) * 0.55;
-          }
-
-          if (ud.arms && ud.arms.length === 2) {
-            ud.arms[0].rotation.x = -strideL * 0.38;
-            ud.arms[1].rotation.x = -strideR * 0.38;
-          }
+          ctrl.play("Walking", 0.3, 0.95);
         }
+      } else if (ctrl.pose === 'touching') {
+        // Natural weight shift during kiosk session
+        root.rotation.y = Math.PI + Math.sin(elapsed * 0.8 + (root.position.x * 2.0)) * 0.035;
       }
     });
   }
 
   /* -------------------------------------------------------------
-     Aadhaar Multi-Pod Kiosk Hardware Assembly ("2. LEAN TOWER")
-     - Overall Height: 1800 mm (1.80 m) | Width: 500 mm (0.50 m) | Depth: 650 mm (0.65 m)
-     - Slim vertical tower form with protruding angled document shelf at 900 mm
-     - Camera 1600mm, Iris 1550mm, Screen 1400mm, Fingerprint 1050mm, Doc Scanner 900mm
+     Aadhaar Multi-Pod Kiosk Hardware Assembly & Stations
+     Authentic Aadhaar Brand Colors:
+     - Body Shell: UIDAI Off-White Pearl
+     - Recessed Panels & Base: UIDAI Navy Blue (0x1e3a8a)
+     - Accents: Saffron / Amber (0xea580c / 0xd97706) & Emerald Green (0x059669)
+     - Grounding Pedestal: Solid Architectural Steel Base Plinth (zero floating gap)
   ------------------------------------------------------------- */
-  function createAadhaarHeaderTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 256, 128);
-
-    ctx.fillStyle = '#f59e0b';
-    for (let i = -3; i <= 3; i++) {
-      const ang = -Math.PI / 2 + i * 0.34;
-      const rx = 128 + Math.cos(ang) * 44;
-      const ry = 66 + Math.sin(ang) * 44;
-      ctx.beginPath();
-      ctx.arc(rx, ry, 7, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.strokeStyle = '#dc2626';
-    ctx.lineWidth = 4;
-    [14, 22, 30].forEach(r => {
-      ctx.beginPath();
-      ctx.arc(128, 68, r, Math.PI, 0);
-      ctx.stroke();
-    });
-
-    ctx.fillStyle = '#dc2626';
-    ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('AADHAAR', 128, 108);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.needsUpdate = true;
-    return tex;
-  }
-
   function buildKioskStations() {
     const podXPositions = [-4.6, -1.6, 1.6, 4.6];
 
@@ -2510,37 +1594,46 @@
     }
 
     // UIDAI Official Brand Theme Materials
-    // Body: Clean High-Tech UIDAI Off-White with subtle warm metallic reflection
-    const absWhiteMaterial = new THREE.MeshPhysicalMaterial({
+    // Body Shell: Clean High-Tech Aadhaar Off-White Pearl
+    const aadhaarWhiteBody = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(0xf8fafc),
-      roughness: 0.22,
-      metalness: 0.12,
-      clearcoat: 0.45,
-      clearcoatRoughness: 0.15
+      roughness: 0.18,
+      metalness: 0.08,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.12
     });
 
-    // Glass Trim: High-Clarity Toughened Security Glass
+    // Glass Trim: Toughened Security Blue Glass
     const glassBlueMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x38bdf8),
-      roughness: 0.08,
-      metalness: 0.1,
-      transmission: 0.72,
+      color: new THREE.Color(0x0284c7),
+      roughness: 0.06,
+      metalness: 0.12,
+      transmission: 0.76,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.92,
       ior: 1.52,
       reflectivity: 0.95
     });
 
-    // Accent Plinth & Bezel: UIDAI Emblem Navy Blue
-    const kioskDarkAccentMaterial = new THREE.MeshStandardMaterial({
+    // UIDAI Official Navy Blue
+    const aadhaarNavyBlue = new THREE.MeshStandardMaterial({
       color: 0x1e3a8a,
-      metalness: 0.5,
-      roughness: 0.25
+      metalness: 0.45,
+      roughness: 0.28
     });
 
-    // Saffron Ambient Indicator Material
-    const uidaiSaffronMat = new THREE.MeshBasicMaterial({
-      color: 0xea580c
+    // UIDAI Official Saffron / Sun Gold Accent
+    const aadhaarSaffronMat = new THREE.MeshStandardMaterial({
+      color: 0xea580c,
+      metalness: 0.35,
+      roughness: 0.30
+    });
+
+    // UIDAI Official India Emerald Green Accent
+    const aadhaarGreenMat = new THREE.MeshStandardMaterial({
+      color: 0x059669,
+      metalness: 0.35,
+      roughness: 0.30
     });
 
     // Parse Kiosk.obj with MTLLoader materials bound
@@ -2563,16 +1656,17 @@
       podGroup.position.set(xPos, 0, -0.6);
       podGroup.userData = { podGroup: true, podIndex: idx + 1 };
 
-      // 1. Overhead Crimson ATM Canopy with Illuminated Ring
+      // 1. Overhead UIDAI Navy & Saffron ATM Canopy with Illuminated Ring
       const canopyGroup = new THREE.Group();
       canopyGroup.position.set(0, 3.1, 0);
 
+      // Canopy Shell in UIDAI Navy Blue
       const canopyGeo = new THREE.CylinderGeometry(0.85, 0.85, 0.42, 24, 1, false, 0, Math.PI);
-      const canopyMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.3, metalness: 0.2 });
-      const canopyMesh = new THREE.Mesh(canopyGeo, canopyMat);
+      const canopyMesh = new THREE.Mesh(canopyGeo, aadhaarNavyBlue);
       canopyMesh.rotation.y = -Math.PI / 2;
       canopyGroup.add(canopyMesh);
 
+      // Illuminated Crown Ring
       const ringGeo = new THREE.TorusGeometry(0.86, 0.025, 12, 32, Math.PI);
       const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       const ringMesh = new THREE.Mesh(ringGeo, ringMat);
@@ -2581,15 +1675,15 @@
       ringMesh.position.y = -0.21;
       canopyGroup.add(ringMesh);
 
+      // Saffron Accent Fin Blade
       const bladeGeo = new THREE.BoxGeometry(0.04, 0.5, 0.35);
-      const bladeMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.2 });
-      const bladeMesh = new THREE.Mesh(bladeGeo, bladeMat);
+      const bladeMesh = new THREE.Mesh(bladeGeo, aadhaarSaffronMat);
       bladeMesh.position.set(0.72, -0.1, 0.2);
       canopyGroup.add(bladeMesh);
 
       podGroup.add(canopyGroup);
 
-      // 2. Kiosk.obj 3D Model Instance
+      // 2. Kiosk.obj 3D Model Instance in Official Aadhaar Colors
       if (kioskBaseModel) {
         const kioskClone = kioskBaseModel.clone(true);
         // Correct orientation:
@@ -2599,7 +1693,7 @@
         kioskClone.rotation.y = 0;
         kioskClone.rotation.z = 0;
         kioskClone.scale.set(0.01, 0.01, 0.01);
-        kioskClone.position.set(0, -0.005, 0);
+        kioskClone.position.set(0, 0, 0); // Snaps bottom surface directly to the ground plane
 
         kioskClone.traverse((child) => {
           if (child.isMesh) {
@@ -2607,17 +1701,17 @@
             child.receiveShadow = true;
             child.userData = { isKioskPart: true, podIndex: idx + 1 };
 
-            // Restore pure original Glass and White materials according to Kiosk.mtl
+            // Apply official Aadhaar brand materials
             if (Array.isArray(child.material)) {
               child.material = child.material.map(m => {
                 const name = (m && m.name) ? m.name : '';
-                return (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
+                return (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : aadhaarWhiteBody;
               });
             } else if (child.material) {
               const name = child.material.name || '';
-              child.material = (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
+              child.material = (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : aadhaarWhiteBody;
             } else {
-              child.material = absWhiteMaterial;
+              child.material = aadhaarWhiteBody;
             }
 
             interactiveScreens.push(child);
@@ -2626,8 +1720,26 @@
 
         podGroup.add(kioskClone);
 
+        // Aadhaar Tricolor Side Trim Stripes on Kiosk Flanks
+        [-0.328, 0.328].forEach(sx => {
+          const trimGroup = new THREE.Group();
+          trimGroup.position.set(sx, 1.05, 0.0);
+
+          // Saffron Stripe
+          const saffStripe = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.038, 0.34), aadhaarSaffronMat);
+          saffStripe.position.y = 0.045;
+          // White Stripe
+          const whiteStripe = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.038, 0.34), aadhaarWhiteBody);
+          whiteStripe.position.y = 0.0;
+          // Green Stripe
+          const greenStripe = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.038, 0.34), aadhaarGreenMat);
+          greenStripe.position.y = -0.045;
+
+          trimGroup.add(saffStripe, whiteStripe, greenStripe);
+          podGroup.add(trimGroup);
+        });
+
         // Precise Back Plane Glass Interface (400mm W x 500mm H / 0.40m x 0.50m)
-        // Positioned inside the recessed screen area to the left of the biometric scanner ring
         const screenObj = createKioskScreenTexture(idx + 1, 0);
         const screenGeo = new THREE.PlaneGeometry(0.40, 0.50);
         const screenMat = new THREE.MeshBasicMaterial({ 
@@ -2635,8 +1747,8 @@
           side: THREE.FrontSide
         });
         const screenMesh = new THREE.Mesh(screenGeo, screenMat);
-        screenMesh.position.set(-0.045, 1.380, 0.028);
-        screenMesh.rotation.x = -0.0997; // Exactly -5.71 degrees tilt matching the CAD recess plane
+        screenMesh.position.set(-0.045, 1.385, 0.028);
+        screenMesh.rotation.x = -0.0997;
         screenMesh.userData = {
           isScreen: true,
           podIndex: idx + 1,
@@ -2646,39 +1758,65 @@
         interactiveScreens.push(screenMesh);
       }
 
-      // 3. Precision architectural grounding rim & contact base (snaps cabinet firmly to the vitrified floor)
-      const baseRimGeo = new THREE.BoxGeometry(0.66, 0.016, 0.41);
-      const baseRimMat = new THREE.MeshStandardMaterial({
-        color: 0x111827,
-        roughness: 0.85,
-        metalness: 0.15
-      });
-      const baseRimMesh = new THREE.Mesh(baseRimGeo, baseRimMat);
-      baseRimMesh.position.set(0, 0.007, -0.05);
-      baseRimMesh.receiveShadow = true;
-      podGroup.add(baseRimMesh);
+      // 3. Solid Architectural Grounding Base (Eliminates ALL floating gap)
+      // Spans full kiosk base footprint and supports the cantilevered front overhang
+      const groundBaseGroup = new THREE.Group();
 
-      // Realistic Contact Ambient Occlusion shadow puddle on floor directly under kiosk base footprint
+      // Lower Main Base Plinth (Snaps cabinet directly to floor tiles)
+      const mainPlinth = new THREE.Mesh(
+        new THREE.BoxGeometry(0.68, 0.045, 0.52),
+        aadhaarNavyBlue
+      );
+      mainPlinth.position.set(0, 0.0225, -0.01);
+      mainPlinth.castShadow = true;
+      mainPlinth.receiveShadow = true;
+
+      // Heavy Ground Bevel Trim (Navy Blue Rubber/Steel base skirt)
+      const baseSkirt = new THREE.Mesh(
+        new THREE.BoxGeometry(0.72, 0.016, 0.56),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85, metalness: 0.15 })
+      );
+      baseSkirt.position.set(0, 0.008, -0.01);
+      baseSkirt.receiveShadow = true;
+
+      // Front Footprint Support Step directly under the shelf overhang
+      const frontSupport = new THREE.Mesh(
+        new THREE.BoxGeometry(0.60, 0.032, 0.16),
+        aadhaarNavyBlue
+      );
+      frontSupport.position.set(0, 0.016, 0.20);
+      frontSupport.castShadow = true;
+
+      // Stainless Steel Kick Plate / Saffron Indicator Trim on Front Base
+      const kickPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.58, 0.012, 0.008),
+        aadhaarSaffronMat
+      );
+      kickPlate.position.set(0, 0.028, 0.282);
+
+      groundBaseGroup.add(baseSkirt, mainPlinth, frontSupport, kickPlate);
+      podGroup.add(groundBaseGroup);
+
+      // Deep Grounding Contact Ambient Occlusion Shadow directly under kiosk footprint
       const contactAOCanvas = document.createElement('canvas');
       contactAOCanvas.width = 256;
       contactAOCanvas.height = 256;
       const cCtx = contactAOCanvas.getContext('2d');
-      // Elliptical gradient matching the kiosk base footprint
-      const radGrad = cCtx.createRadialGradient(128, 128, 25, 128, 128, 120);
-      radGrad.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
-      radGrad.addColorStop(0.35, 'rgba(0, 0, 0, 0.75)');
-      radGrad.addColorStop(0.7, 'rgba(0, 0, 0, 0.35)');
+      const radGrad = cCtx.createRadialGradient(128, 128, 20, 128, 128, 125);
+      radGrad.addColorStop(0, 'rgba(0, 0, 0, 0.98)');
+      radGrad.addColorStop(0.40, 'rgba(0, 0, 0, 0.82)');
+      radGrad.addColorStop(0.75, 'rgba(0, 0, 0, 0.38)');
       radGrad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
       cCtx.fillStyle = radGrad;
       cCtx.fillRect(0, 0, 256, 256);
       const contactAOTex = new THREE.CanvasTexture(contactAOCanvas);
 
       const contactAOMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.3, 1.05),
-        new THREE.MeshBasicMaterial({ map: contactAOTex, transparent: true, opacity: 0.92 })
+        new THREE.PlaneGeometry(1.4, 1.25),
+        new THREE.MeshBasicMaterial({ map: contactAOTex, transparent: true, opacity: 0.94 })
       );
       contactAOMesh.rotation.x = -Math.PI / 2;
-      contactAOMesh.position.set(0, 0.002, -0.05);
+      contactAOMesh.position.set(0, 0.002, 0.04);
       podGroup.add(contactAOMesh);
 
       scene.add(podGroup);
@@ -3095,7 +2233,7 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.98;
+    renderer.toneMappingExposure = 1.08;
     renderer.xr.enabled = true;
     container.appendChild(renderer.domElement);
 
@@ -3126,7 +2264,8 @@
     entranceFillLight.shadow.camera.top = 6.0;
     entranceFillLight.shadow.camera.bottom = -2.0;
     entranceFillLight.shadow.camera.updateProjectionMatrix();
-    entranceFillLight.shadow.bias = -0.0004;
+    entranceFillLight.shadow.bias = -0.0005;
+    entranceFillLight.shadow.normalBias = 0.05;
     scene.add(entranceFillLight, entranceFillLight.target);
 
     // Warm 3200K Overhead Architectural Spotlights Above Each Kiosk Bay
