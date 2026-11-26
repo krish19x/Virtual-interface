@@ -1175,13 +1175,13 @@
      Accurate proportions, layered cloth, facial anatomy, natural eyes, and organic motion
   ------------------------------------------------------------- */
 
-          // =========================================================================
-  // SPORTS TURF VR HIGH-FIDELITY CHARACTER SYSTEM & PBR RENDERING ENGINE
-  // Sourced from Sports_Turf_VR.html:
-  // - Fully rigged, skinned skeletal humanoid characters (Ch38) with anatomically realistic human faces
-  // - 13 motion-captured skeletal animation clips (Idle, Walking, Jogging, Passing, Header, etc.)
-  // - Root-motion stabilization & proper Three.js SkinnedMesh Skeleton Cloning
-  // - Customized wardrobe: Shirt, Shorts/Pants, Socks, Shoes, Skin Tone, Hair Color
+            // =========================================================================
+  // PROFESSIONAL OFFICE & WORK ATTIRE CHARACTER SYSTEM
+  // Replaces sports gear with business/work attire:
+  // - Oxford button-up shirts with plackets & collars
+  // - High-waisted tailored pleated trousers / chinos
+  // - Polished black & cordovan leather dress shoes
+  // - Striped neckties, laminated security ID badges, and leather wristwatches
   // =========================================================================
 
   let gltfPlayerBase = null;
@@ -1220,7 +1220,7 @@
     return cloned;
   }
 
-  // Skin tone palette from Sports_Turf_VR
+  // Skin tone palette
   const TURF_SKIN_PALETTE = [
     [0.86, 0.76, 0.68], // Warm light tan
     [0.72, 0.60, 0.52], // Medium golden tan (GTA / Reference tone)
@@ -1230,7 +1230,7 @@
     [1.00, 1.00, 1.00]  // Natural neutral
   ];
 
-  // Hair color palette from Sports_Turf_VR
+  // Hair color palette
   const TURF_HAIR_PALETTE = [
     0x1a1a1c, // Natural soft black
     0x2a1a14, // Dark chocolate brown
@@ -1238,6 +1238,170 @@
     0x3a2c20, // Auburn / chestnut
     0x71717a  // Salt-and-pepper silver
   ];
+
+  // 1. Procedural Crisp Office Button-Up Shirt Texture
+  function createOfficeShirtTexture(colorHex, pattern = 'solid') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    const col = new THREE.Color(colorHex);
+    ctx.fillStyle = col.getStyle();
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Fine woven cotton oxford grid
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
+    for (let x = 0; x < 512; x += 4) {
+      ctx.fillRect(x, 0, 1.2, 512);
+    }
+    for (let y = 0; y < 512; y += 4) {
+      ctx.fillRect(0, y, 512, 1.2);
+    }
+
+    if (pattern === 'pinstripe') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.20)';
+      for (let x = 0; x < 512; x += 16) {
+        ctx.fillRect(x, 0, 2, 512);
+      }
+    }
+
+    // Natural horizontal fabric fold shadows
+    for (let f = 0; f < 5; f++) {
+      const fy = f * 95 + 40;
+      const foldGrad = ctx.createLinearGradient(0, fy, 0, fy + 30);
+      foldGrad.addColorStop(0, 'rgba(0, 0, 0, 0.12)');
+      foldGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+      foldGrad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+      ctx.fillStyle = foldGrad;
+      ctx.fillRect(0, fy, 512, 30);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 2);
+    return tex;
+  }
+
+  // 2. Procedural Formal Office Trousers / Chinos Texture
+  function createFormalTrousersTexture(colorHex) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    const col = new THREE.Color(colorHex);
+    ctx.fillStyle = col.getStyle();
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Diagonal formal twill weave
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1.0;
+    for (let i = -512; i < 1024; i += 6) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + 512, 512);
+      ctx.stroke();
+    }
+
+    // Vertical pressed crease shadow
+    const creaseGrad = ctx.createLinearGradient(230, 0, 280, 0);
+    creaseGrad.addColorStop(0, 'rgba(0, 0, 0, 0.18)');
+    creaseGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.12)');
+    creaseGrad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+    ctx.fillStyle = creaseGrad;
+    ctx.fillRect(230, 0, 50, 512);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 2);
+    return tex;
+  }
+
+  // 3. Striped Business Necktie Texture
+  function createBusinessTieTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base deep navy / slate blue
+    ctx.fillStyle = '#1e3a8a';
+    ctx.fillRect(0, 0, 128, 512);
+
+    // Diagonal silver-grey & gold stripes
+    for (let y = -256; y < 768; y += 48) {
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(128, y + 80);
+      ctx.lineTo(128, y + 92);
+      ctx.lineTo(0, y + 12);
+      ctx.fill();
+
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.moveTo(0, y + 18);
+      ctx.lineTo(128, y + 98);
+      ctx.lineTo(128, y + 104);
+      ctx.lineTo(0, y + 24);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  }
+
+  // 4. Laminated Security ID Photo Badge Texture
+  function createWorkIdBadgeTexture(dept = "UIDAI OPERATIONS") {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+
+    // Laminated white card
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(2, 2, 124, 176);
+
+    // Header banner
+    ctx.fillStyle = '#1e3a8a';
+    ctx.fillRect(6, 6, 116, 26);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(dept, 10, 23);
+
+    // Photo box
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(16, 42, 44, 52);
+    ctx.fillStyle = '#475569';
+    ctx.beginPath();
+    ctx.arc(38, 62, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(24, 76, 28, 18);
+
+    // Name lines
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(68, 48, 44, 6);
+    ctx.fillRect(68, 60, 36, 5);
+    ctx.fillRect(68, 72, 40, 5);
+
+    // Barcode
+    ctx.fillStyle = '#0f172a';
+    for (let b = 14; b < 114; b += 4) {
+      if (Math.random() > 0.25) {
+        ctx.fillRect(b, 112, 2.5, 30);
+      }
+    }
+
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(2, 2, 124, 176);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  }
 
   // Asynchronous Loader for Rigged GLB Human Characters
   async function loadTurfCharacterModel() {
@@ -1281,28 +1445,32 @@
       gltf.scene.userData.nativeHeight = bbox.max.y - bbox.min.y;
       gltfPlayerBase = gltf.scene;
 
-      console.log("Sports_Turf_VR character rig loaded successfully with", Object.keys(playerAnimations).length, "animations.");
+      console.log("Professional character rig loaded successfully with", Object.keys(playerAnimations).length, "animations.");
       return gltfPlayerBase;
     } catch (err) {
-      console.error("Error loading Sports_Turf_VR character:", err);
+      console.error("Error loading character rig:", err);
     }
   }
 
-  // Sports_Turf_VR Character Factory with Proper SkinnedMesh Skeleton Rebinding
+  // Work Attire Character Factory with Proper SkinnedMesh Skeleton Rebinding
   function createTurfPerson(config) {
     const {
       x = 0, z = 0, rotY = 0,
       height = 1.76,
-      shirt = 0x1e3a8a,
-      shorts = 0x1e293b,
-      socks = null,
-      shoes = 0x151518,
+      shirt = 0xdbeafe, // Default: Crisp office sky blue button-up
+      shorts = 0x334155, // Default: Charcoal-grey pleated trousers
+      shoes = 0x151518, // Default: Black formal dress shoes
       skin = 1,
       hair = 0,
       anim = "Idle",
       speed = 0,
       path = null,
-      pose = 'standing'
+      pose = 'standing',
+      hasTie = true,
+      hasBadge = true,
+      hasWatch = true,
+      shirtPattern = 'solid',
+      role = 'office'
     } = config;
 
     if (!gltfPlayerBase) {
@@ -1322,10 +1490,22 @@
 
     const skinRGB = TURF_SKIN_PALETTE[skin % TURF_SKIN_PALETTE.length];
     const hairColorHex = TURF_HAIR_PALETTE[hair % TURF_HAIR_PALETTE.length];
-    const socksColor = socks !== null ? socks : shirt;
 
-    // Apply PBR Materials & Custom Wardrobe to Rigged Sub-Meshes
+    // Professional PBR Materials
+    const shirtTex = createOfficeShirtTexture(shirt, shirtPattern);
+    const trousersTex = createFormalTrousersTexture(shorts);
+
+    // Apply Professional Work Attire to Sub-Meshes
+    let spineNode = null;
+    let leftHandNode = null;
+
     charRoot.traverse(child => {
+      if (child.name && /Spine2/i.test(child.name)) {
+        spineNode = child;
+      } else if (child.name && /LeftForeArm/i.test(child.name)) {
+        leftHandNode = child;
+      }
+
       if (!child.isMesh) return;
       child.castShadow = true;
       child.receiveShadow = true;
@@ -1335,28 +1515,32 @@
       const name = child.name || '';
 
       if (/Shirt/i.test(name)) {
-        mat.map = null;
-        mat.color.set(shirt);
+        // Professional button-up shirt
+        mat.map = shirtTex;
+        mat.color.set(0xffffff); // Controlled by texture
         mat.roughness = 0.65;
         mat.metalness = 0.02;
       } else if (/Shorts|Pants/i.test(name)) {
-        mat.map = null;
-        mat.color.set(shorts);
+        // High-waisted formal trousers / slacks
+        mat.map = trousersTex;
+        mat.color.set(0xffffff);
         mat.roughness = 0.72;
         mat.metalness = 0.02;
       } else if (/Socks/i.test(name)) {
+        // Socks match the dark trousers color seamlessly
         mat.map = null;
-        mat.color.set(socksColor);
+        mat.color.set(shorts);
         mat.roughness = 0.75;
       } else if (/Shoes/i.test(name)) {
+        // Polished formal leather oxfords
         mat.map = null;
         mat.color.set(shoes);
-        mat.roughness = 0.35;
-        mat.metalness = 0.12;
+        mat.roughness = 0.28;
+        mat.metalness = 0.18;
       } else if (/Body/i.test(name)) {
-        // High fidelity human face & body skin from Sports_Turf_VR
+        // Realistic human face and body skin
         mat.color.setRGB(skinRGB[0], skinRGB[1], skinRGB[2]);
-        mat.roughness = 0.48;
+        mat.roughness = 0.46;
         mat.metalness = 0.04;
       } else if (/Hair/i.test(name)) {
         mat.color.set(hairColorHex);
@@ -1366,6 +1550,97 @@
       }
       child.material = mat;
     });
+
+    // Add Professional Accessories (Necktie, ID Badge, Wristwatch)
+    const attachTarget = spineNode || charRoot;
+
+    // 1. Striped Business Necktie
+    if (hasTie) {
+      const tieTex = createBusinessTieTexture();
+      const tieMat = new THREE.MeshStandardMaterial({
+        map: tieTex,
+        roughness: 0.52,
+        metalness: 0.06
+      });
+
+      const tieGroup = new THREE.Group();
+      if (spineNode) {
+        tieGroup.position.set(0, 0.16, 0.12);
+      } else {
+        tieGroup.position.set(0, 1.38, 0.12);
+      }
+
+      // Windsor knot
+      const tieKnot = new THREE.Mesh(new THREE.ConeGeometry(0.026, 0.045, 4), tieMat);
+      tieKnot.rotation.y = Math.PI / 4;
+      tieKnot.rotation.x = Math.PI;
+      tieKnot.position.set(0, 0.015, 0.014);
+
+      // Hanging tie blade
+      const tieBlade = new THREE.Mesh(new THREE.BoxGeometry(0.046, 0.38, 0.010), tieMat);
+      tieBlade.position.set(0, -0.18, 0.015);
+
+      // Pointed tip
+      const tieTip = new THREE.Mesh(new THREE.ConeGeometry(0.023, 0.044, 4), tieMat);
+      tieTip.rotation.y = Math.PI / 4;
+      tieTip.rotation.x = Math.PI;
+      tieTip.position.set(0, -0.38, 0.015);
+
+      tieGroup.add(tieKnot, tieBlade, tieTip);
+      attachTarget.add(tieGroup);
+    }
+
+    // 2. Laminated Security ID Photo Badge with Clip
+    if (hasBadge) {
+      const badgeTex = createWorkIdBadgeTexture(role === 'officer' ? 'UIDAI SECURITY' : 'STAFF ACCESS');
+      const badgeGroup = new THREE.Group();
+      if (spineNode) {
+        badgeGroup.position.set(0.082, 0.08, 0.13);
+      } else {
+        badgeGroup.position.set(0.082, 1.32, 0.13);
+      }
+
+      const clipMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.012, 0.018, 0.008),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.15 })
+      );
+      clipMesh.position.set(0, 0.036, 0);
+
+      const badgeCard = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.046, 0.065),
+        new THREE.MeshBasicMaterial({ map: badgeTex, side: THREE.DoubleSide })
+      );
+      badgeCard.position.set(0, -0.006, 0.002);
+      badgeGroup.add(clipMesh, badgeCard);
+      attachTarget.add(badgeGroup);
+    }
+
+    // 3. Leather Wristwatch on Left Arm
+    if (hasWatch && leftHandNode) {
+      const watchGroup = new THREE.Group();
+      watchGroup.position.set(0, 0.20, 0);
+
+      const strap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.038, 0.038, 0.024, 16),
+        new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.45 })
+      );
+      const watchCase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.014, 0.014, 0.008, 12),
+        new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.2 })
+      );
+      watchCase.rotation.z = Math.PI / 2;
+      watchCase.position.set(-0.036, 0, 0);
+
+      const dial = new THREE.Mesh(
+        new THREE.CircleGeometry(0.012, 12),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      dial.rotation.y = -Math.PI / 2;
+      dial.position.set(-0.041, 0, 0);
+
+      watchGroup.add(strap, watchCase, dial);
+      leftHandNode.add(watchGroup);
+    }
 
     // Rigged Animation Mixer & Controller
     const mixer = new THREE.AnimationMixer(charRoot);
@@ -1409,7 +1684,7 @@
     return charController;
   }
 
-  // Populate the 7 Human Citizens with Correct Station Coordinates (Clear of all dividers)
+  // Populate the 7 Citizens in Realistic Professional Work Attire
   async function buildHumanCharacters() {
     await loadTurfCharacterModel();
 
@@ -1418,112 +1693,127 @@
       return;
     }
 
-    // Citizen 1: Kiosk 1 Occupant updating demographics
-    // Kiosk 1 is at X = -4.6, Z = -0.6. Standing in front of kiosk facing screen:
+    // Citizen 1: Kiosk 1 Occupant - Office worker in crisp sky blue shirt, necktie & charcoal slacks
     const user1 = createTurfPerson({
-      x: -4.6, z: 0.52, rotY: 0, // rotY=0 faces toward -Z (looking at kiosk)
+      x: -4.6, z: 0.52, rotY: 0,
       height: 1.76,
-      shirt: 0x0369a1, // Ocean blue button-up
-      shorts: 0x1e293b, // Indigo denim trousers
-      socks: 0x1e293b,
-      shoes: 0x151518,
+      shirt: 0xdbeafe, // Crisp pale sky blue office button-up
+      shorts: 0x334155, // Charcoal-grey pleated trousers
+      shoes: 0x151518, // Black leather oxfords
       skin: 1, // Medium warm golden tone
       hair: 2, // Jet black
       anim: "Idle",
-      pose: 'touching'
+      pose: 'touching',
+      hasTie: true,
+      hasBadge: true,
+      hasWatch: true,
+      shirtPattern: 'pinstripe'
     });
     if (user1) {
       scene.add(user1.root);
       humanCharacters.push(user1);
     }
 
-    // Citizen 2: Kiosk 3 Occupant performing biometric verification
-    // Kiosk 3 is at X = 1.6, Z = -0.6. Standing in front of kiosk facing screen:
+    // Citizen 2: Kiosk 3 Occupant - Executive in deep navy blazer tone with white shirt & tie
     const user3 = createTurfPerson({
       x: 1.6, z: 0.52, rotY: 0,
-      height: 1.70,
-      shirt: 0x047857, // Emerald green
-      shorts: 0xf8fafc, // Crisp off-white trousers
-      socks: 0xf8fafc,
-      shoes: 0x334155,
+      height: 1.72,
+      shirt: 0x1e3a8a, // Professional navy office shirt
+      shorts: 0x0f172a, // Pressed black trousers
+      shoes: 0x18181b, // Black dress shoes
       skin: 0, // Warm light tan
       hair: 0,
       anim: "Idle",
-      pose: 'touching'
+      pose: 'touching',
+      hasTie: true,
+      hasBadge: true,
+      hasWatch: true,
+      shirtPattern: 'solid'
     });
     if (user3) {
       scene.add(user3.root);
       humanCharacters.push(user3);
     }
 
-    // Citizen 3: Kiosk 4 Occupant senior citizen
-    // Kiosk 4 is at X = 4.6, Z = -0.6. Standing in front of kiosk facing screen:
+    // Citizen 3: Kiosk 4 Occupant - Senior citizen professional with tie and salt-and-pepper hair
     const user4 = createTurfPerson({
       x: 4.6, z: 0.52, rotY: 0,
-      height: 1.72,
-      shirt: 0xb45309, // Saffron amber shirt
-      shorts: 0x334155, // Charcoal trousers
-      socks: 0x334155,
-      shoes: 0x18181b,
+      height: 1.74,
+      shirt: 0xfef3c7, // Warm ivory-cream dress shirt
+      shorts: 0x475569, // Slate grey trousers
+      shoes: 0x2e1810, // Dark cordovan leather shoes
       skin: 4, // Deep melanin rich
       hair: 4, // Salt-and-pepper silver
       anim: "Idle",
-      pose: 'touching'
+      pose: 'touching',
+      hasTie: true,
+      hasBadge: false,
+      hasWatch: true,
+      shirtPattern: 'solid'
     });
     if (user4) {
       scene.add(user4.root);
       humanCharacters.push(user4);
     }
 
-    // Citizen 4: Waiting Bench Citizen
+    // Citizen 4: Waiting Bench Citizen - Business professional on phone
     const waiter = createTurfPerson({
       x: -5.2, z: 2.5, rotY: Math.PI / 2,
       height: 1.76,
-      shirt: 0x475569, // Slate grey
-      shorts: 0x0f172a, // Black jeans
-      socks: 0x0f172a,
-      shoes: 0x1e293b,
+      shirt: 0x64748b, // Slate office shirt
+      shorts: 0x1e293b, // Indigo trousers
+      shoes: 0x18181b,
       skin: 2, // Warm brown
       hair: 0,
-      anim: "Keeper Idle", // Seated/relaxed crouch pose
-      pose: 'sitting'
+      anim: "Keeper Idle", // Seated relaxed posture
+      pose: 'sitting',
+      hasTie: false,
+      hasBadge: true,
+      hasWatch: true,
+      shirtPattern: 'solid'
     });
     if (waiter) {
       scene.add(waiter.root);
       humanCharacters.push(waiter);
     }
 
-    // Citizen 5: UIDAI Vestibule Officer in Navy Uniform
+    // Citizen 5: UIDAI Vestibule Security / Operations Officer in official uniform
     const assistant = createTurfPerson({
       x: 5.5, z: 2.4, rotY: -Math.PI * 0.72,
       height: 1.80,
-      shirt: 0x1e3a8a, // Official duty deep navy
-      shorts: 0x0f172a, // Black uniform trousers
-      socks: 0x0f172a,
-      shoes: 0x111827,
+      shirt: 0x172554, // Official deep midnight navy
+      shorts: 0x09090b, // Pressed black uniform trousers
+      shoes: 0x0a0a0c,
       skin: 1, // Warm tan
       hair: 1,
       anim: "Idle",
-      pose: 'standing'
+      pose: 'standing',
+      hasTie: true,
+      hasBadge: true,
+      hasWatch: true,
+      role: 'officer'
     });
     if (assistant) {
       scene.add(assistant.root);
       humanCharacters.push(assistant);
     }
 
-    // Citizen 6: Dynamic Walking Citizen 1 from entrance to queue
+    // Citizen 6: Dynamic Walking Citizen 1 - Commuter with tie and lavender dress shirt
     const walker1 = createTurfPerson({
       x: -2.0, z: 4.8, rotY: 0,
       height: 1.74,
-      shirt: 0x6b21a8, // Textured deep purple top
-      shorts: 0x1e293b, // Indigo trousers
-      socks: 0x1e293b,
+      shirt: 0xe0e7ff, // Lavender-white formal shirt
+      shorts: 0x1e293b, // Navy trousers
       shoes: 0x18181b,
       skin: 3, // Fair tone
       hair: 2,
       anim: "Walking",
       pose: 'walking',
       speed: 0.85,
+      hasTie: true,
+      hasBadge: true,
+      hasWatch: true,
+      shirtPattern: 'pinstripe',
       path: [
         { x: -1.2, z: 4.6 },
         { x: -3.8, z: 2.8 },
@@ -1537,19 +1827,22 @@
       humanCharacters.push(walker1);
     }
 
-    // Citizen 7: Dynamic Walking Citizen 2 toward glass exit doors
+    // Citizen 7: Dynamic Walking Citizen 2 - Commuter in formal rose madder blouse & slacks
     const walker2 = createTurfPerson({
       x: 3.2, z: 1.6, rotY: 0,
       height: 1.68,
-      shirt: 0xbe123c, // Rose madder formal top
-      shorts: 0x0f172a, // Black trousers
-      socks: 0x0f172a,
+      shirt: 0xbe123c, // Rose madder formal office blouse
+      shorts: 0x0f172a, // Black tailored slacks
       shoes: 0x111827,
       skin: 1,
       hair: 0,
       anim: "Walking",
       pose: 'walking',
       speed: 0.75,
+      hasTie: false,
+      hasBadge: true,
+      hasWatch: true,
+      shirtPattern: 'solid',
       path: [
         { x: 3.4, z: 1.5 },
         { x: 1.8, z: 3.2 },
@@ -1607,11 +1900,11 @@
 
   /* -------------------------------------------------------------
      Aadhaar Multi-Pod Kiosk Hardware Assembly & Stations
-     Authentic Aadhaar Brand Colors:
-     - Body Shell: UIDAI Off-White Pearl
-     - Recessed Panels & Base: UIDAI Navy Blue (0x1e3a8a)
-     - Accents: Saffron / Amber (0xea580c / 0xd97706) & Emerald Green (0x059669)
-     - Grounding Pedestal: Solid Architectural Steel Base Plinth (zero floating gap)
+     Original CAD Material Specification:
+     - Pure ABS White body shell (matching Kiosk.obj / Kiosk.mtl)
+     - High-clarity light blue toughened security glass
+     - Architectural crimson canopy with warm illuminated crown ring
+     - Solid grounding pedestal plinth firmly anchoring cabinet to floor
   ------------------------------------------------------------- */
   function buildKioskStations() {
     const podXPositions = [-4.6, -1.6, 1.6, 4.6];
@@ -1628,47 +1921,26 @@
       }
     }
 
-    // UIDAI Official Brand Theme Materials
-    // Body Shell: Clean High-Tech Aadhaar Off-White Pearl
-    const aadhaarWhiteBody = new THREE.MeshPhysicalMaterial({
+    // Original CAD Materials according to Kiosk.mtl
+    // Body: Clean High-Tech ABS Off-White
+    const absWhiteMaterial = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(0xf8fafc),
-      roughness: 0.18,
-      metalness: 0.08,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.12
+      roughness: 0.22,
+      metalness: 0.12,
+      clearcoat: 0.45,
+      clearcoatRoughness: 0.15
     });
 
-    // Glass Trim: Toughened Security Blue Glass
+    // Glass Trim: High-Clarity Toughened Security Glass
     const glassBlueMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(0x0284c7),
-      roughness: 0.06,
-      metalness: 0.12,
-      transmission: 0.76,
+      color: new THREE.Color(0x38bdf8),
+      roughness: 0.08,
+      metalness: 0.1,
+      transmission: 0.72,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.90,
       ior: 1.52,
       reflectivity: 0.95
-    });
-
-    // UIDAI Official Navy Blue
-    const aadhaarNavyBlue = new THREE.MeshStandardMaterial({
-      color: 0x1e3a8a,
-      metalness: 0.45,
-      roughness: 0.28
-    });
-
-    // UIDAI Official Saffron / Sun Gold Accent
-    const aadhaarSaffronMat = new THREE.MeshStandardMaterial({
-      color: 0xea580c,
-      metalness: 0.35,
-      roughness: 0.30
-    });
-
-    // UIDAI Official India Emerald Green Accent
-    const aadhaarGreenMat = new THREE.MeshStandardMaterial({
-      color: 0x059669,
-      metalness: 0.35,
-      roughness: 0.30
     });
 
     // Parse Kiosk.obj with MTLLoader materials bound
@@ -1691,17 +1963,16 @@
       podGroup.position.set(xPos, 0, -0.6);
       podGroup.userData = { podGroup: true, podIndex: idx + 1 };
 
-      // 1. Overhead UIDAI Navy & Saffron ATM Canopy with Illuminated Ring
+      // 1. Overhead Crimson ATM Canopy with Illuminated Ring
       const canopyGroup = new THREE.Group();
       canopyGroup.position.set(0, 3.1, 0);
 
-      // Canopy Shell in UIDAI Navy Blue
       const canopyGeo = new THREE.CylinderGeometry(0.85, 0.85, 0.42, 24, 1, false, 0, Math.PI);
-      const canopyMesh = new THREE.Mesh(canopyGeo, aadhaarNavyBlue);
+      const canopyMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.3, metalness: 0.2 });
+      const canopyMesh = new THREE.Mesh(canopyGeo, canopyMat);
       canopyMesh.rotation.y = -Math.PI / 2;
       canopyGroup.add(canopyMesh);
 
-      // Illuminated Crown Ring
       const ringGeo = new THREE.TorusGeometry(0.86, 0.025, 12, 32, Math.PI);
       const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       const ringMesh = new THREE.Mesh(ringGeo, ringMat);
@@ -1710,15 +1981,15 @@
       ringMesh.position.y = -0.21;
       canopyGroup.add(ringMesh);
 
-      // Saffron Accent Fin Blade
       const bladeGeo = new THREE.BoxGeometry(0.04, 0.5, 0.35);
-      const bladeMesh = new THREE.Mesh(bladeGeo, aadhaarSaffronMat);
+      const bladeMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.2 });
+      const bladeMesh = new THREE.Mesh(bladeGeo, bladeMat);
       bladeMesh.position.set(0.72, -0.1, 0.2);
       canopyGroup.add(bladeMesh);
 
       podGroup.add(canopyGroup);
 
-      // 2. Kiosk.obj 3D Model Instance in Official Aadhaar Colors
+      // 2. Kiosk.obj 3D Model Instance in Pure Original CAD Materials
       if (kioskBaseModel) {
         const kioskClone = kioskBaseModel.clone(true);
         // Correct orientation:
@@ -1736,17 +2007,17 @@
             child.receiveShadow = true;
             child.userData = { isKioskPart: true, podIndex: idx + 1 };
 
-            // Apply official Aadhaar brand materials
+            // Restore pure original CAD Glass and White materials
             if (Array.isArray(child.material)) {
               child.material = child.material.map(m => {
                 const name = (m && m.name) ? m.name : '';
-                return (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : aadhaarWhiteBody;
+                return (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
               });
             } else if (child.material) {
               const name = child.material.name || '';
-              child.material = (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : aadhaarWhiteBody;
+              child.material = (name.includes('Glass') || name.includes('Blue')) ? glassBlueMaterial : absWhiteMaterial;
             } else {
-              child.material = aadhaarWhiteBody;
+              child.material = absWhiteMaterial;
             }
 
             interactiveScreens.push(child);
@@ -1754,25 +2025,6 @@
         });
 
         podGroup.add(kioskClone);
-
-        // Aadhaar Tricolor Side Trim Stripes on Kiosk Flanks
-        [-0.328, 0.328].forEach(sx => {
-          const trimGroup = new THREE.Group();
-          trimGroup.position.set(sx, 1.05, 0.0);
-
-          // Saffron Stripe
-          const saffStripe = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.038, 0.34), aadhaarSaffronMat);
-          saffStripe.position.y = 0.045;
-          // White Stripe
-          const whiteStripe = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.038, 0.34), aadhaarWhiteBody);
-          whiteStripe.position.y = 0.0;
-          // Green Stripe
-          const greenStripe = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.038, 0.34), aadhaarGreenMat);
-          greenStripe.position.y = -0.045;
-
-          trimGroup.add(saffStripe, whiteStripe, greenStripe);
-          podGroup.add(trimGroup);
-        });
 
         // Precise Back Plane Glass Interface (400mm W x 500mm H / 0.40m x 0.50m)
         const screenObj = createKioskScreenTexture(idx + 1, 0);
@@ -1797,16 +2049,16 @@
       // Spans full kiosk base footprint and supports the cantilevered front overhang
       const groundBaseGroup = new THREE.Group();
 
-      // Lower Main Base Plinth (Snaps cabinet directly to floor tiles)
+      // Lower Main Base Plinth in Charcoal Steel (Snaps cabinet directly to floor tiles)
       const mainPlinth = new THREE.Mesh(
         new THREE.BoxGeometry(0.68, 0.045, 0.52),
-        aadhaarNavyBlue
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.55, metalness: 0.35 })
       );
       mainPlinth.position.set(0, 0.0225, -0.01);
       mainPlinth.castShadow = true;
       mainPlinth.receiveShadow = true;
 
-      // Heavy Ground Bevel Trim (Navy Blue Rubber/Steel base skirt)
+      // Heavy Ground Bevel Trim (Rubber/Steel base skirt)
       const baseSkirt = new THREE.Mesh(
         new THREE.BoxGeometry(0.72, 0.016, 0.56),
         new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85, metalness: 0.15 })
@@ -1817,15 +2069,15 @@
       // Front Footprint Support Step directly under the shelf overhang
       const frontSupport = new THREE.Mesh(
         new THREE.BoxGeometry(0.60, 0.032, 0.16),
-        aadhaarNavyBlue
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.55, metalness: 0.35 })
       );
       frontSupport.position.set(0, 0.016, 0.20);
       frontSupport.castShadow = true;
 
-      // Stainless Steel Kick Plate / Saffron Indicator Trim on Front Base
+      // Subtle stainless steel kick trim on front edge
       const kickPlate = new THREE.Mesh(
         new THREE.BoxGeometry(0.58, 0.012, 0.008),
-        aadhaarSaffronMat
+        new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85, roughness: 0.25 })
       );
       kickPlate.position.set(0, 0.028, 0.282);
 
@@ -1859,7 +2111,7 @@
     });
   }
 
-  /* -------------------------------------------------------------
+    /* -------------------------------------------------------------
      Input Handling & Physics Movement
   ------------------------------------------------------------- */
   function setupEventHandlers() {
